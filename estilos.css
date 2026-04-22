@@ -1,0 +1,301 @@
+/* --- VARIABLES GLOBALES --- */
+:root {
+    --primary: #007bff;
+    --primary-hover: #0056b3;
+    --gold: #ffcc00;
+    --green: #28a745;
+    --danger: #dc3545;
+    --bg-dark: #0d0d0d;
+    --bg-panel: #1a1a1a;
+    --text: #e0e0e0;
+    --shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+/* --- ESTILOS BASE --- */
+body {
+    background-color: var(--bg-dark);
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    line-height: 1.6;
+}
+
+header {
+    background: linear-gradient(180deg, #222, var(--bg-dark));
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid #333;
+}
+
+/* --- BOTONES --- */
+button {
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+button:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+#generarCarta { background-color: #6f42c1; }
+#generarCarta:hover { background-color: #59339d; }
+
+/* --- FILTROS DE MANÁ --- */
+.mana-filter {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.mana-btn {
+    background: #252525;
+    font-size: 1.3rem;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: 0.3s;
+    padding: 0;
+}
+
+.mana-btn:hover { transform: scale(1.1); background: #333; }
+.mana-btn.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 10px var(--primary);
+    background: #333;
+}
+
+#clearFilters { background: #444; border-radius: 50%; width: 45px; }
+
+/* --- INPUTS Y SELECTS --- */
+input[type="text"], select {
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    outline: none;
+}
+
+input[type="text"]:focus { border-color: var(--primary); }
+
+/* --- LAYOUT PRINCIPAL --- */
+.main-layout {
+    display: flex;
+    padding: 20px;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.side-panel {
+    width: 260px;
+    background: var(--bg-panel);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    position: sticky;
+    top: 20px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+}
+
+.side-panel h3 {
+    color: var(--primary);
+    margin-top: 0;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    font-size: 1rem;
+}
+
+/* --- SPINNER DE CARGA --- */
+#status-msg-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 120px;
+    width: 100%;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+#status-msg {
+    color: var(--primary);
+    font-weight: bold;
+    font-style: italic;
+    text-align: center;
+}
+
+.hidden { display: none !important; }
+
+/* --- GRID DE CARTAS --- */
+.contenedor-wrapper { flex-grow: 1; }
+
+.contenedor {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.card-wrapper {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: 0.3s ease;
+}
+
+.card-wrapper:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    z-index: 10;
+}
+
+.card-wrapper img { width: 100%; display: block; }
+
+/* Botones flotantes sobre la carta */
+.btn-fav-card, .btn-deck-card {
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    bottom: 15px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    z-index: 5;
+}
+
+.btn-fav-card { left: 12px; background: var(--gold); color: black; }
+.btn-deck-card { right: 12px; background: var(--green); color: white; }
+
+/* --- LISTAS DE MAZOS Y FAVORITOS --- */
+#listaCartasMazo, #listaFavoritos { list-style: none; padding: 0; }
+
+#listaCartasMazo li, #listaFavoritos li {
+    background: #252525;
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    border-left: 4px solid var(--primary);
+}
+
+.btn-eliminar-item {
+    background: var(--danger) !important;
+    padding: 2px 8px !important;
+    font-size: 0.7rem !important;
+}
+
+.deck-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+
+/* --- MODO PARTIDA (CONTADOR DE VIDAS) --- */
+.partida-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    padding: 30px;
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+.jugador-card {
+    background: var(--bg-panel);
+    border: 2px solid #333;
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: var(--shadow);
+}
+
+.vida-numero {
+    font-size: 6rem;
+    font-weight: 900;
+    margin: 10px 0;
+    display: block;
+    text-shadow: 0 0 20px rgba(255,255,255,0.1);
+}
+
+.controles-vida { display: flex; justify-content: center; gap: 20px; }
+
+.btn-vida {
+    font-size: 2.5rem;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.eliminado {
+    opacity: 0.2;
+    filter: grayscale(1) blur(2px);
+    pointer-events: none;
+    transform: scale(0.9);
+}
+
+.eliminado-tag {
+    color: var(--danger);
+    font-weight: bold;
+    font-size: 1.5rem;
+    display: block;
+    margin-top: 10px;
+}
+
+.ganador {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 40px var(--gold);
+    transform: scale(1.05);
+}
+
+.ganador-tag {
+    color: var(--gold);
+    font-size: 2.2rem;
+    font-weight: bold;
+    display: block;
+    margin-top: 15px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
