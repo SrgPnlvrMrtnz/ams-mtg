@@ -185,7 +185,7 @@ La versión final del proyecto migrará a una arquitectura moderna basada en **S
         │                       │
 ┌───────▼──────┐     ┌──────────▼──────────┐
 │ Scryfall API │     │  Base de Datos       │
-│ (externa)    │     │  (Supabase / Prisma) │
+│ (externa)    │     │  (SQLite / Prisma)   │
 └──────────────┘     └─────────────────────┘
 ```
 
@@ -206,7 +206,7 @@ La versión final del proyecto migrará a una arquitectura moderna basada en **S
 | **Tailwind CSS** | Estilos | Utilidad, consistencia, rapid prototyping |
 | **Scryfall API** | Fuente de datos de cartas | Base de datos completa y gratuita de MTG |
 | **Python** | Clustering y análisis de cartas | Preprocesamiento de datos y agrupamiento (K-Means / DBSCAN) |
-| **Supabase** *(roadmap)* | Base de datos + Auth | PostgreSQL gestionado con SDK de JS/TS |
+| **SQLite** *(roadmap)* | Base de datos local | Ligera, sin servidor, integrada con Prisma |
 | **HTML / CSS / JS** | Prototipo actual | Prueba de concepto funcional sin dependencias |
 
 ---
@@ -263,9 +263,8 @@ Crear un archivo `.env` en la raíz del proyecto:
 
 ```env
 # Scryfall no requiere API key.
-# Variables necesarias para la integración con Supabase (roadmap):
-PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-PUBLIC_SUPABASE_ANON_KEY=tu-clave-anonima
+# Variables necesarias para la integración con SQLite (roadmap):
+DATABASE_URL="file:./dev.db"
 ```
 
 ---
@@ -320,7 +319,7 @@ ams-mtg/
 ### Fase 1 — MVP (prioridad)
 - Sistema de registro e inicio de sesión (usuarios privados).
 - Perfil de usuario con mazos asociados.
-- Migración de `localStorage` a base de datos en la nube.
+- Migración de `localStorage` a base de datos SQLite local.
 - CRUD completo de mazos desde cualquier dispositivo.
 - Historial de partidas guardado por usuario.
 
