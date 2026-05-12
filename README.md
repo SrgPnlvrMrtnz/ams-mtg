@@ -2,9 +2,10 @@
 
 ![SvelteKit](https://img.shields.io/badge/SvelteKit-FF3E00?style=for-the-badge&logo=svelte&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Scryfall API](https://img.shields.io/badge/Scryfall-API-1a1a2e?style=for-the-badge)
 
-> Aplicación web académica diseñada para centralizar todas las herramientas necesarias para jugar y gestionar Magic: The Gathering: buscador de cartas, creación y administración de mazos, y un completo sistema de seguimiento de partidas.
+> Aplicación web académica diseñada para centralizar todas las herramientas necesarias para jugar y gestionar Magic: The Gathering: buscador de cartas, creación y administración de mazos, un completo sistema de seguimiento de partidas, y un asistente de recomendación de cartas basado en clustering.
 
 ---
 
@@ -12,6 +13,7 @@
 
 - [Descripción del Proyecto](#descripción-del-proyecto)
 - [Funcionalidades](#funcionalidades)
+- [Asistente de Mazos con Clustering](#asistente-de-mazos-con-clustering)
 - [Arquitectura Objetivo](#arquitectura-objetivo)
 - [Tecnologías](#tecnologías)
 - [Integración con la API de Scryfall](#integración-con-la-api-de-scryfall)
@@ -26,11 +28,12 @@
 
 **AMS MTG** es una aplicación web todo-en-uno para jugadores de Magic: The Gathering, desarrollada como proyecto académico con el objetivo de sustituir el uso de múltiples herramientas dispersas por una única plataforma centralizada.
 
-El proyecto combina tres grandes módulos en una sola aplicación:
+El proyecto combina cuatro grandes módulos en una sola aplicación:
 
 1. **Buscador de cartas** — Consulta en tiempo real la base de datos completa de Scryfall con filtros avanzados por color de maná, tipo de carta y nombre.
 2. **Gestor de mazos** — Creación, edición y organización de mazos con persistencia local y, en versiones futuras, en la nube.
 3. **Modo combate / Battle Arena** — Sistema de seguimiento de partidas multijugador con control de vidas, contadores, dado y moneda animados, rastreo de daño de comandante y registro histórico de acciones.
+4. **Asistente de mazos** — Módulo avanzado de recomendación de cartas basado en clustering (Python), que detecta desequilibrios en el mazo y sugiere cartas similares o complementarias.
 
 ---
 
@@ -80,6 +83,86 @@ El proyecto combina tres grandes módulos en una sola aplicación:
 
 ---
 
+## Asistente de Mazos con Clustering
+
+Como mejora avanzada sobre el MVP, AMS MTG incluirá un módulo de recomendación de cartas construido en **Python** mediante técnicas de **clustering**. El objetivo no es construir automáticamente "el mejor mazo", sino asistir al jugador detectando desequilibrios y sugiriendo cartas afines a su estrategia.
+
+### ¿Qué hace el sistema?
+
+El script de clustering analiza el catálogo de cartas y las agrupa según sus características jugables, generando grupos como:
+
+- Cartas de coste bajo y juego rápido.
+- Criaturas grandes y de coste alto.
+- Instantáneos y conjuros de apoyo.
+- Tierras y cartas sin coste de maná.
+- Cartas defensivas o de protección.
+- Cartas multicolor.
+
+El algoritmo **no entiende Magic** como un jugador experto: detecta patrones en los datos y asigna a cada carta un identificador de cluster. La lógica de negocio (colores compatibles, curva de maná, legalidad en formato) se aplica por separado en las reglas de la aplicación.
+
+### Campos usados para el agrupamiento
+
+De la API de Scryfall y del JSON de cartas se utilizan los siguientes campos:
+
+| Campo | Descripción |
+|---|---|
+| `cmc` | Coste convertido de maná |
+| `colors` / `color_identity` | Colores de la carta |
+| `card_types` | Criatura, instantáneo, conjuro, tierra, artefacto... |
+| `keywords` | Habilidades y palabras clave |
+| `power` / `toughness` | Fuerza y resistencia (criaturas) |
+| `rarity` | Común, infrecuente, rara, mítica |
+| `legalities` | Formatos en los que la carta es legal |
+
+> Campos como artista, imagen o número de colección se usan solo para presentación visual, no para el clustering.
+
+### Funcionalidades del asistente
+
+- **Cartas similares**: al ver una carta, mostrar otras del mismo cluster.
+- **Variedad controlada**: sugerir cartas de clusters no representados en el mazo.
+- **Análisis del mazo**: detectar exceso de cartas caras, falta de hechizos baratos o escasez de tierras.
+- **Recomendaciones por estilo**: filtrar sugerencias por perfil agresivo, defensivo o de apoyo.
+- **Comparación de mazos**: indicar si dos mazos tienen perfiles jugables similares.
+
+Un ejemplo de mensaje que podría mostrar la aplicación:
+
+```
+Tu mazo tiene muchas criaturas de coste alto.
+Faltan cartas de coste 1-2.
+No tienes casi instantáneos de respuesta rápida.
+Sugerencia: revisa cartas de los clusters de coste bajo y apoyo defensivo.
+```
+
+### Flujo técnico
+
+```
+Scryfall JSON
+     │
+     ▼
+script Python (clustering)
+ · limpieza de campos
+ · normalización numérica
+ · algoritmo de clustering (K-Means / DBSCAN)
+ · exportación: cards_with_clusters.json
+     │
+     ▼
+Base de datos / JSON estático
+     │
+     ▼
+API Routes (SvelteKit)  ──►  Componente Asistente (frontend)
+```
+
+### Prioridad y alcance
+
+| Funcionalidad | Viabilidad | Prioridad |
+|---|---|---|
+| MVP (búsqueda, usuarios, mazos) | Alta | Primera fase |
+| Clustering básico de cartas | Alta | Segunda fase |
+| Recomendador de cartas similares | Media-alta | Segunda fase |
+| Constructor automático de mazos competitivos | Baja-media | Fuera de alcance |
+
+---
+
 ## Arquitectura Objetivo
 
 La versión final del proyecto migrará a una arquitectura moderna basada en **SvelteKit** y **TypeScript**, con las siguientes capas:
@@ -122,6 +205,7 @@ La versión final del proyecto migrará a una arquitectura moderna basada en **S
 | **TypeScript** | Lenguaje principal | Tipado estático, seguridad en desarrollo |
 | **Tailwind CSS** | Estilos | Utilidad, consistencia, rapid prototyping |
 | **Scryfall API** | Fuente de datos de cartas | Base de datos completa y gratuita de MTG |
+| **Python** | Clustering y análisis de cartas | Preprocesamiento de datos y agrupamiento (K-Means / DBSCAN) |
 | **Supabase** *(roadmap)* | Base de datos + Auth | PostgreSQL gestionado con SDK de JS/TS |
 | **HTML / CSS / JS** | Prototipo actual | Prueba de concepto funcional sin dependencias |
 
@@ -233,15 +317,22 @@ ams-mtg/
 
 ## Roadmap
 
-### Autenticación de usuarios
-- Sistema de registro e inicio de sesión.
+### Fase 1 — MVP (prioridad)
+- Sistema de registro e inicio de sesión (usuarios privados).
 - Perfil de usuario con mazos asociados.
-- Sincronización entre dispositivos.
-
-### Persistencia en base de datos
 - Migración de `localStorage` a base de datos en la nube.
 - CRUD completo de mazos desde cualquier dispositivo.
 - Historial de partidas guardado por usuario.
+
+### Fase 2 — Asistente de mazos con clustering (Python)
+- Script Python para limpiar y normalizar los campos jugables del JSON de Scryfall.
+- Aplicar algoritmo de clustering (K-Means u otro) sobre el conjunto de cartas.
+- Exportar el resultado (`cards_with_clusters.json`) e integrarlo en la base de datos.
+- Endpoint en SvelteKit para servir recomendaciones por cluster.
+- Componente frontend "Asistente de mazos" con:
+  - Cartas similares a la seleccionada.
+  - Análisis de desequilibrios del mazo actual.
+  - Sugerencias de cartas de clusters no representados.
 
 ---
 
