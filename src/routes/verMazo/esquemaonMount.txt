@@ -1,0 +1,29 @@
+localStorage
+│
+├── 'mazoAVer'   → '["Lightning Bolt", "Counterspell", "Black Lotus"]'  (string JSON)
+└── 'nombreMazo' → 'Mi Mazo'  (string)
+        │
+        │  JSON.parse()
+        ▼
+nombres = ["Lightning Bolt", "Counterspell", "Black Lotus"]  (array de strings)
+        │
+        │  .map() → por cada nombre, un fetch
+        ▼
+fetch('https://api.scryfall.com/cards/named?exact=Lightning Bolt')
+fetch('https://api.scryfall.com/cards/named?exact=Counterspell')
+fetch('https://api.scryfall.com/cards/named?exact=Black Lotus')
+        │
+        │  Promise.all() → espera a que todos terminen
+        ▼
+resultados = [
+    { id: "...", name: "Lightning Bolt", image_uris: { png: "..." }, mana_cost: "{R}", ... },
+    { id: "...", name: "Counterspell",   image_uris: { png: "..." }, mana_cost: "{U}{U}", ... },
+    null  ← si algún fetch falló
+]
+        │
+        │  .filter(Boolean) → elimina los null
+        ▼
+cartas = [
+    { id: "...", name: "Lightning Bolt", image_uris: { png: "..." }, ... },
+    { id: "...", name: "Counterspell",   image_uris: { png: "..." }, ... }
+]

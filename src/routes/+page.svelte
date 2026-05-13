@@ -1,18 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	/* El estado $state, esta pendiente de cualquier cambio que se haga en la variable, por lo tanto, gracias a esto,
+	se actualiza sola */
+	let puntero = $state(0);
+	let colorSeleccionado = $state('');
+	let textoBusqueda = $state('');
+	let numPagina = $state(1);
+	let cargando = $state(false);
+	let statusMsg = $state('');
+	let cartas = $state<any[]>([]);
 
-	let puntero = 0;
-	let colorSeleccionado = '';
-	let textoBusqueda = '';
-	let numPagina = 1;
-	let cargando = false;
-	let statusMsg = '';
-	let cartas: any[] = [];
-
-	let favoritos: string[] = [];
-	let mazos: Record<string, string[]> = {};
-	let mazoSeleccionado = '';
-	let nuevoMazoNombre = '';
+	let favoritos = $state<string[]>([]);
+	let mazos = $state<Record<string, string[]>>({});
+	let mazoSeleccionado = $state('');
+	let nuevoMazoNombre = $state('');
+	let mostrarPanelMazo = $state(false);
 
 	const frasesMagicas = [
 		'Invocando hechizos del grimorio...',
@@ -156,6 +158,36 @@
 		if (carta.card_faces?.[0]?.image_uris?.png) return carta.card_faces[0].image_uris.png;
 		return '';
 	}
+
+	function abrirMazoVentanaNueva(){
+		//Guardar datos del mazo en localStorage para que la otra ventana pueda leerlos. 
+		localStorage.setItem('mazoAVer', JSON.stringify(mazos[mazoSeleccionado]))
+		localStorage.setItem('nombreMazo', mazoSeleccionado)
+
+		//Se abre la nueva ventana (creado en un archivo .html a parte)
+		window.open('/verMazo', '_blank')
+	}
+
+
+	//para ver el mazo que hemos seleccionado
+	function verMazo(){
+		
+		if(mazoSeleccionado == ''){
+			alert('Hechizo fallido! Primero selecciona un mazo de los que hay en la lista.');
+			return
+		}else{
+			mostrarPanelMazo = true;
+			abrirMazoVentanaNueva()
+		}
+	}
+
+	//Para cerrar el panel que hemos abierto del mazo seleccionado
+	function cerrarMazo(){
+		
+		mostrarPanelMazo = false; 
+	}
+
+	
 </script>
 
 <svelte:head>
@@ -253,10 +285,13 @@
 				</li>
 			{/each}
 		</ul>
+		<!--Ver mazo-->
+		<button onclick={verMazo}>Ver Mazo</button>
 	</aside>
 </main>
 
 <style>
+
 	:global(:root) {
 		--primary: #007bff;
 		--primary-hover: #0056b3;
