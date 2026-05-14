@@ -181,12 +181,6 @@
 		}
 	}
 
-	//Para cerrar el panel que hemos abierto del mazo seleccionado
-	function cerrarMazo(){
-		
-		mostrarPanelMazo = false; 
-	}
-
 	
 </script>
 

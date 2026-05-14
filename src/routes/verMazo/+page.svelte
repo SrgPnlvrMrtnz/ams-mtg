@@ -1,4 +1,5 @@
 <script lang="ts">
+   
     import {onMount} from 'svelte';
 
     let nombreMazo = $state('');
@@ -36,6 +37,7 @@
 </script>
 
 <!--HTML-->
+<button  style="background-color: blueviolet; border-radius: 9px;"onclick={() => window.close()}>← Volver al menú principal</button>
 <h1>Nombre del Mazo: {nombreMazo}</h1>
 
 {#if cargando}
