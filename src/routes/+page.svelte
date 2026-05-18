@@ -6,15 +6,19 @@
 	let colorSeleccionado = $state('');
 	let textoBusqueda = $state('');
 	let numPagina = $state(1);
-	let cargando = $state(false);
-	let statusMsg = $state('');
-	let cartas = $state<any[]>([]);
 
+	let cartas = $state<any[]>([]);
+	let cartaSeleccionada = $state<any>(null);
+
+	let cargando = $state(false);	
+	let statusMsg = $state('');
+	
 	let favoritos = $state<string[]>([]);
 	let mazos = $state<Record<string, string[]>>({});
 	let mazoSeleccionado = $state('');
 	let nuevoMazoNombre = $state('');
 	let mostrarPanelMazo = $state(false);
+	
 
 	const frasesMagicas = [
 		'Invocando hechizos del grimorio...',
@@ -181,6 +185,15 @@
 		}
 	}
 
+	function verDetalle(carta:any){
+
+		cartaSeleccionada = carta; //guarda la carta clickeada
+	}
+
+	function cerrarDetalle(){
+		cartaSeleccionada = null; //la borra, cierra el panel
+	}
+
 	
 </script>
 
@@ -191,7 +204,7 @@
 <header>
 	<div class="header-top">
 		<h1>Scryfall Magic PRO</h1>
-		<a href="/partida" class="btn btn-danger">⚔️ Modo Partida</a>
+		<a href="/partida.html" class="btn btn-danger">⚔️ Modo Partida</a>
 	</div>
 
 	<div class="search-bar">
@@ -249,7 +262,7 @@
 				{@const imgUrl = getImageUrl(carta)}
 				{#if imgUrl}
 					<div class="card-wrapper">
-						<img src={imgUrl} alt={carta.name} />
+						<img src={imgUrl} alt={carta.name} onclick={() => verDetalle(carta)} style="cursor: pointer;" />
 						<button class="btn-fav-card" onclick={() => agregarFavorito(carta.name)}>⭐</button>
 						<button class="btn-deck-card" onclick={() => agregarAlMazo(carta.name)}>➕</button>
 					</div>
@@ -282,9 +295,53 @@
 		<!--Ver mazo-->
 		<button onclick={verMazo}>Ver Mazo</button>
 	</aside>
+	{#if cartaSeleccionada}
+    <div class="detalle-overlay" onclick={cerrarDetalle} onkeydown={(e) => { if (e.key === 'Escape') cerrarDetalle(); }} role="button" tabindex="-1">
+        <div class="detalle-panel" onclick={(e) => e.stopPropagation()}>
+            <button onclick={cerrarDetalle}>✕ Cerrar</button>
+            <h2>{cartaSeleccionada.name}</h2>
+            <img src={getImageUrl(cartaSeleccionada)} alt={cartaSeleccionada.name} />
+            <p><strong>Tipo:</strong> {cartaSeleccionada.type_line}</p>
+            <p><strong>Coste de maná:</strong> {cartaSeleccionada.mana_cost}</p>
+            <p><strong>Texto:</strong> {cartaSeleccionada.oracle_text}</p>
+            {#if cartaSeleccionada.power}
+                <p><strong>Poder/Resistencia:</strong> {cartaSeleccionada.power}/{cartaSeleccionada.toughness}</p>
+            {/if}
+            <p><strong>Rareza:</strong> {cartaSeleccionada.rarity}</p>
+        </div>
+    </div>
+	{/if} <!--Mejorar esta parte.--> 
+
 </main>
 
 <style>
+
+	.detalle-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+	}
+
+	.detalle-panel {
+		background: #1a1a2e;
+		color: white;
+		padding: 2rem;
+		border-radius: 12px;
+		max-width: 500px;
+		width: 90%;
+		max-height: 90vh;
+		overflow-y: auto;
+	}
+
+	.detalle-panel img {
+		width: 100%;
+		border-radius: 8px;
+		margin-bottom: 1rem;
+	}
 
 	:global(:root) {
 		--primary: #007bff;
