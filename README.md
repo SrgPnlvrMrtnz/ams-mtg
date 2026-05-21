@@ -18,6 +18,7 @@
 - [Tecnologías](#tecnologías)
 - [Integración con la API de Scryfall](#integración-con-la-api-de-scryfall)
 - [Instalación y Desarrollo](#instalación-y-desarrollo)
+- [Despliegue en Cloudflare Pages](#despliegue-en-cloudflare-pages)
 - [Estructura del Proyecto](#estructura-del-proyecto)
 - [Roadmap](#roadmap)
 - [Equipo](#equipo)
@@ -185,7 +186,7 @@ La versión final del proyecto migrará a una arquitectura moderna basada en **S
         │                       │
 ┌───────▼──────┐     ┌──────────▼──────────┐
 │ Scryfall API │     │  Base de Datos       │
-│ (externa)    │     │  (Supabase / Prisma) │
+│ (externa)    │     │  (SQLite / Prisma)   │
 └──────────────┘     └─────────────────────┘
 ```
 
@@ -206,7 +207,8 @@ La versión final del proyecto migrará a una arquitectura moderna basada en **S
 | **Tailwind CSS** | Estilos | Utilidad, consistencia, rapid prototyping |
 | **Scryfall API** | Fuente de datos de cartas | Base de datos completa y gratuita de MTG |
 | **Python** | Clustering y análisis de cartas | Preprocesamiento de datos y agrupamiento (K-Means / DBSCAN) |
-| **Supabase** *(roadmap)* | Base de datos + Auth | PostgreSQL gestionado con SDK de JS/TS |
+| **SQLite + Prisma** | Base de datos local | Ligera, sin servidor; pendiente de migrar a D1 para producción |
+| **Cloudflare Pages** | Plataforma de despliegue | Edge global, tier gratuito, preview URLs por PR |
 | **HTML / CSS / JS** | Prototipo actual | Prueba de concepto funcional sin dependencias |
 
 ---
@@ -263,10 +265,83 @@ Crear un archivo `.env` en la raíz del proyecto:
 
 ```env
 # Scryfall no requiere API key.
-# Variables necesarias para la integración con Supabase (roadmap):
-PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-PUBLIC_SUPABASE_ANON_KEY=tu-clave-anonima
+# Variables necesarias para la integración con SQLite (roadmap):
+DATABASE_URL="file:./dev.db"
 ```
+
+---
+
+## Despliegue en Cloudflare Pages
+
+AMS MTG se despliega en **Cloudflare Pages**, que ejecuta el servidor SvelteKit como un Worker en el edge global de Cloudflare. Los activos estáticos se sirven desde el CDN y las API routes se ejecutan como funciones serverless sin necesidad de un servidor dedicado.
+
+### Flujo de despliegue
+
+```
+git push → GitHub
+    │
+    └─► Cloudflare Pages detecta el push
+            │
+            ├─ npm install
+            ├─ npm run build
+            └─► despliega en https://ams-mtg.pages.dev
+```
+
+Cada pull request genera automáticamente una **preview URL** independiente para revisar cambios antes de mergear.
+
+### Cambios necesarios respecto al desarrollo local
+
+**1. Cambiar el adapter de SvelteKit**
+
+```bash
+npm install -D @sveltejs/adapter-cloudflare
+```
+
+En `svelte.config.js`:
+
+```js
+import adapter from '@sveltejs/adapter-cloudflare';
+```
+
+**2. Añadir `wrangler.toml`** en la raíz del proyecto:
+
+```toml
+name = "ams-mtg"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+```
+
+El flag `nodejs_compat` es necesario para que `bcryptjs` y Prisma Client funcionen en el entorno Workers, que no incluye todas las APIs de Node.js por defecto.
+
+**3. Variables de entorno**
+
+En producción las variables no se leen desde `.env`. Se configuran desde el dashboard de Cloudflare Pages (*Settings → Environment variables*) o con la CLI de Wrangler:
+
+```bash
+wrangler secret put DATABASE_URL
+```
+
+### Limitación actual: base de datos
+
+SQLite utiliza el sistema de archivos local, lo que **no es compatible con el entorno Workers** (sin acceso a disco). La solución es migrar a **Cloudflare D1**, la base de datos SQLite distribuida de Cloudflare, que es compatible con Prisma y no requiere cambios en el esquema.
+
+Esta migración está pendiente y se realizará una vez que el resto de funcionalidades estén estables. Hasta entonces, la aplicación se puede desplegar en Cloudflare Pages pero las rutas que dependen de la base de datos no funcionarán en producción.
+
+### Conectar el repositorio a Cloudflare Pages
+
+1. Acceder a [Cloudflare Dashboard](https://dash.cloudflare.com) → **Workers & Pages → Create**.
+2. Conectar la cuenta de GitHub y seleccionar el repositorio `ams-mtg`.
+3. Configurar el build:
+
+| Parámetro | Valor |
+|---|---|
+| Framework preset | SvelteKit |
+| Build command | `npm run build` |
+| Build output directory | `.svelte-kit/cloudflare` |
+| Node.js version | 18 |
+
+4. Añadir la variable de entorno `DATABASE_URL` (aunque actualmente no funcional en Workers).
+5. Desplegar.
 
 ---
 
@@ -320,7 +395,7 @@ ams-mtg/
 ### Fase 1 — MVP (prioridad)
 - Sistema de registro e inicio de sesión (usuarios privados).
 - Perfil de usuario con mazos asociados.
-- Migración de `localStorage` a base de datos en la nube.
+- Migración de `localStorage` a base de datos SQLite local.
 - CRUD completo de mazos desde cualquier dispositivo.
 - Historial de partidas guardado por usuario.
 

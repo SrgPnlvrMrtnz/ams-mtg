@@ -1,5 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+
+	async function logout() {
+		await fetch('/api/auth/logout', { method: 'POST' });
+		goto('/login');
+	}
 
 	let puntero = $state(0);
 	let colorSeleccionado = $state('');
@@ -193,7 +199,10 @@
 			<button class="btn btn-ghost" onclick={cartaAleatoria}>Aleatoria</button>
 		</div>
 
-		<a href="/partida" class="btn btn-danger">Modo Partida</a>
+		<div class="header-actions">
+			<a href="/partida" class="btn btn-danger">Modo Partida</a>
+			<button class="btn btn-logout" onclick={logout}>Cerrar sesión</button>
+		</div>
 	</div>
 
 	<!-- Mana filter bar -->
@@ -501,6 +510,30 @@
 	.btn-ghost:disabled {
 		opacity: 0.4;
 		cursor: not-allowed;
+	}
+
+	.header-actions {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+	}
+
+	.btn-logout {
+		background: transparent;
+		border: 1px solid #555;
+		color: #aaa;
+		font-size: 0.85rem;
+		padding: 8px 14px;
+		font-weight: normal;
+		text-transform: none;
+	}
+
+	.btn-logout:hover {
+		background: #2a2a2a;
+		border-color: #888;
+		color: var(--text);
+		transform: none;
+		box-shadow: none;
 	}
 
 	.btn-danger {
