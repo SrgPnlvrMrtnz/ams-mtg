@@ -1,5 +1,27 @@
 import bcrypt from 'bcryptjs';
+import { SignJWT, jwtVerify } from 'jose';
+import { JWT_SECRET } from '$env/static/private';
 import db from './db';
+
+const secret = new TextEncoder().encode(JWT_SECRET);
+
+export async function createJwt(userId: string, email: string): Promise<string> {
+	return new SignJWT({ email })
+		.setProtectedHeader({ alg: 'HS256' })
+		.setSubject(userId)
+		.setIssuedAt()
+		.setExpirationTime('7d')
+		.sign(secret);
+}
+
+export async function verifyJwt(token: string): Promise<{ userId: string; email: string } | null> {
+	try {
+		const { payload } = await jwtVerify(token, secret);
+		return { userId: payload.sub as string, email: payload.email as string };
+	} catch {
+		return null;
+	}
+}
 
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 
