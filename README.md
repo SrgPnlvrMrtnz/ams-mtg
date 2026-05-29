@@ -264,6 +264,9 @@ npm run preview
 Crear un archivo `.env` en la raíz del proyecto:
 
 ```env
+# Obligatoria para firmar/verificar JWT de login.
+JWT_SECRET="cambia-esto-por-un-secreto-largo-y-aleatorio"
+
 # Scryfall no requiere API key.
 # Variables necesarias para la integración con SQLite (roadmap):
 DATABASE_URL="file:./dev.db"
