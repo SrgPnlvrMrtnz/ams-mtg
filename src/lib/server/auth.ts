@@ -3,7 +3,13 @@ import { SignJWT, jwtVerify } from 'jose';
 import { JWT_SECRET } from '$env/static/private';
 import db from './db';
 
-const secret = new TextEncoder().encode(JWT_SECRET);
+const jwtSecret = (JWT_SECRET ?? '').trim();
+
+if (!jwtSecret) {
+	throw new Error('Missing JWT_SECRET. Set JWT_SECRET in .env before starting the app.');
+}
+
+const secret = new TextEncoder().encode(jwtSecret);
 
 export async function createJwt(userId: string, email: string): Promise<string> {
 	return new SignJWT({ email })
