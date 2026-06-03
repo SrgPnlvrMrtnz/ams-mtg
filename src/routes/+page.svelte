@@ -298,7 +298,8 @@
 					format: modalFormato || null,
 					description: modalDescripcion || null,
 					colorIdentity: modalColores,
-					commander: modalComandantes.length > 0 ? JSON.stringify(modalComandantes) : null
+					commander: modalComandantes.length > 0 ? JSON.stringify(modalComandantes) : null,
+					cards: modalComandantes
 				})
 			});
 			if (res.ok) {

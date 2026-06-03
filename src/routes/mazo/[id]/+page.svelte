@@ -31,6 +31,11 @@
 	const totalCartas = $derived(cartasEnMazo.length);
 	const colores = $derived<string[]>(deck ? JSON.parse(deck.colorIdentity) : []);
 
+	const comandantesDelMazo = $derived.by<string[]>(() => {
+		if (!deck?.commander) return [];
+		try { return JSON.parse(deck.commander); } catch { return [deck.commander!]; }
+	});
+
 	const cartasAgrupadas = $derived.by(() => {
 		const conteo: Record<string, number> = {};
 		for (const c of cartasEnMazo) {
@@ -237,7 +242,11 @@
 								</div>
 							{/if}
 						</div>
-						{#if cantidad > 1}<div class="qty-badge">×{cantidad}</div>{/if}
+						{#if comandantesDelMazo.includes(nombre)}
+						<div class="commander-badge">⚔ Comandante</div>
+					{:else if cantidad > 1}
+						<div class="qty-badge">×{cantidad}</div>
+					{/if}
 					</article>
 				{/each}
 			</div>
@@ -367,6 +376,7 @@
 	.meta-mana { font-size: 11px; color: var(--gold); font-weight: 600; }
 	.meta-type { font-size: 10px; color: var(--text-secondary); }
 	.qty-badge { position: absolute; top: 6px; right: 6px; background: rgba(8,8,14,0.85); color: var(--accent-light); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; border: 1px solid rgba(124,92,246,0.4); backdrop-filter: blur(4px); }
+	.commander-badge { position: absolute; top: 6px; right: 6px; background: rgba(8,8,14,0.88); color: var(--gold); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(201,168,64,0.5); backdrop-filter: blur(4px); }
 
 	.search-panel { width: 280px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); padding: 16px; position: sticky; top: 57px; max-height: calc(100vh - 57px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 	.panel-header { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
