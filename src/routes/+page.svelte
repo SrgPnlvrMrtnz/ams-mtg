@@ -464,6 +464,11 @@
 			{#if mazos[mazoSeleccionado].length === 0}
 				<p class="empty-hint">Este mazo está vacío.</p>
 			{:else}
+				<div class="deck-count-row">
+					<a href="/mazo/{encodeURIComponent(mazoSeleccionado)}" class="btn btn-ghost ver-mazo-btn">
+						Ver mazo
+					</a>
+				</div>
 				<ul class="item-list">
 					{#each mazos[mazoSeleccionado] as carta, i}
 						<li class="item-row">
@@ -1260,5 +1265,15 @@
 		width: 16px;
 		text-align: right;
 		flex-shrink: 0;
+	}
+
+	.deck-count-row {
+		margin-bottom: 8px;
+	}
+
+	.ver-mazo-btn {
+		width: 100%;
+		justify-content: center;
+		font-size: 11px;
 	}
 </style>
