@@ -52,9 +52,14 @@
 	let modalFormato = $state('');
 	let modalDescripcion = $state('');
 	let modalColores: string[] = $state([]);
-	let modalComandante = $state('');
+	let modalComandantes: string[] = $state([]);
+	let modalComandanteInput = $state('');
+	let modalComandanteValido = $state(false);
+	let modalComandanteError = $state('');
 	let modalComandanteSugerencias: string[] = $state([]);
 	let modalCargando = $state(false);
+
+	const COMMANDER_FORMATS = ['Commander', 'Brawl', 'Oathbreaker'];
 
 	const frasesMagicas = [
 		'Consultando los pergaminos del oráculo...',
@@ -230,7 +235,10 @@
 		modalFormato = '';
 		modalDescripcion = '';
 		modalColores = [];
-		modalComandante = '';
+		modalComandantes = [];
+		modalComandanteInput = '';
+		modalComandanteValido = false;
+		modalComandanteError = '';
 		modalComandanteSugerencias = [];
 		modalAbierto = true;
 	}
@@ -243,20 +251,43 @@
 
 	let _comandanteTimer: ReturnType<typeof setTimeout>;
 	async function buscarComandante(q: string) {
-		modalComandante = q;
+		modalComandanteInput = q;
+		modalComandanteValido = false;
+		modalComandanteError = '';
 		clearTimeout(_comandanteTimer);
 		if (q.length < 2) { modalComandanteSugerencias = []; return; }
 		_comandanteTimer = setTimeout(async () => {
 			try {
 				const res = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(q)}+is%3Acommander`);
 				const data = await res.json();
-				modalComandanteSugerencias = data.data?.slice(0, 5) ?? [];
+				modalComandanteSugerencias = data.data?.slice(0, 6) ?? [];
 			} catch { modalComandanteSugerencias = []; }
 		}, 300);
 	}
 
+	function agregarComandante(nombre: string) {
+		if (!modalComandantes.includes(nombre)) {
+			modalComandantes = [...modalComandantes, nombre];
+		}
+		modalComandanteInput = '';
+		modalComandanteValido = true;
+		modalComandanteError = '';
+		modalComandanteSugerencias = [];
+	}
+
+	function quitarComandante(i: number) {
+		modalComandantes = modalComandantes.filter((_, idx) => idx !== i);
+	}
+
 	async function confirmarCrearMazo() {
 		if (!modalNombre.trim()) return;
+
+		// Validate commander input if format requires it
+		if (COMMANDER_FORMATS.includes(modalFormato) && modalComandanteInput.trim() && !modalComandanteValido) {
+			modalComandanteError = 'Selecciona el nombre exacto de la lista de sugerencias.';
+			return;
+		}
+
 		modalCargando = true;
 		try {
 			const res = await fetch('/api/decks', {
@@ -267,7 +298,7 @@
 					format: modalFormato || null,
 					description: modalDescripcion || null,
 					colorIdentity: modalColores,
-					commander: modalComandante || null
+					commander: modalComandantes.length > 0 ? JSON.stringify(modalComandantes) : null
 				})
 			});
 			if (res.ok) {
@@ -555,7 +586,10 @@
 
 		{#if mazoSeleccionado}
 			{#if mazoSeleccionado.commander}
-				<p class="deck-meta">⚔ {mazoSeleccionado.commander}</p>
+				{@const cmds = (() => { try { return JSON.parse(mazoSeleccionado.commander); } catch { return [mazoSeleccionado.commander]; } })()}
+				{#each cmds as cmd}
+					<p class="deck-meta">⚔ {cmd}</p>
+				{/each}
 			{/if}
 			{#if mazoSeleccionado.description}
 				<p class="deck-meta deck-desc">{mazoSeleccionado.description}</p>
@@ -678,29 +712,48 @@
 					</div>
 				</div>
 
+			{#if COMMANDER_FORMATS.includes(modalFormato)}
 				<div class="form-field">
-					<label class="field-label" for="modal-comandante">Comandante</label>
+					<label class="field-label" for="modal-comandante">
+						Comandante
+						<span class="field-hint">— puedes añadir varios (Partner, Background...)</span>
+					</label>
+
+					{#if modalComandantes.length > 0}
+						<ul class="commander-list">
+							{#each modalComandantes as cmd, i}
+								<li class="commander-tag">
+									<span>{cmd}</span>
+									<button onclick={() => quitarComandante(i)} title="Quitar">×</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+
 					<div class="autocomplete-wrap">
 						<input
 							id="modal-comandante"
 							type="text"
-							value={modalComandante}
+							value={modalComandanteInput}
 							oninput={(e) => buscarComandante((e.target as HTMLInputElement).value)}
-							placeholder="Buscar comandante..."
+							placeholder="Buscar y seleccionar comandante..."
+							class:input-error={!!modalComandanteError}
 						/>
 						{#if modalComandanteSugerencias.length > 0}
 							<ul class="autocomplete-list">
 								{#each modalComandanteSugerencias as sug}
 									<li>
-										<button onclick={() => { modalComandante = sug; modalComandanteSugerencias = []; }}>
-											{sug}
-										</button>
+										<button onclick={() => agregarComandante(sug)}>{sug}</button>
 									</li>
 								{/each}
 							</ul>
 						{/if}
 					</div>
+					{#if modalComandanteError}
+						<p class="field-error">{modalComandanteError}</p>
+					{/if}
 				</div>
+			{/if}
 			</div>
 
 			<div class="modal-footer">
@@ -1604,5 +1657,60 @@
 	.autocomplete-list li button:hover {
 		background: var(--accent-dim);
 		color: var(--accent-light);
+	}
+
+	.field-hint {
+		font-weight: 400;
+		color: var(--text-muted);
+		text-transform: none;
+		letter-spacing: 0;
+		font-size: 10px;
+	}
+
+	.field-error {
+		margin: 4px 0 0;
+		font-size: 11px;
+		color: var(--danger);
+	}
+
+	:global(.input-error) {
+		border-color: var(--danger) !important;
+	}
+
+	.commander-list {
+		list-style: none;
+		padding: 0;
+		margin: 0 0 6px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.commander-tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		background: var(--accent-dim);
+		border: 1px solid rgba(124, 92, 246, 0.3);
+		border-radius: 20px;
+		padding: 3px 10px 3px 12px;
+		font-size: 12px;
+		color: var(--accent-light);
+	}
+
+	.commander-tag button {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--text-muted);
+		font-size: 14px;
+		line-height: 1;
+		padding: 0;
+		display: flex;
+		align-items: center;
+	}
+
+	.commander-tag button:hover {
+		color: var(--danger);
 	}
 </style>

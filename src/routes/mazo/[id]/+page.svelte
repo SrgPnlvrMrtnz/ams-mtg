@@ -186,7 +186,10 @@
 	{#if deck?.commander || deck?.description}
 		<div class="deck-subheader">
 			{#if deck.commander}
-				<span class="commander-chip">⚔ {deck.commander}</span>
+				{@const cmds = (() => { try { return JSON.parse(deck.commander); } catch { return [deck.commander]; } })()}
+				{#each cmds as cmd}
+					<span class="commander-chip">⚔ {cmd}</span>
+				{/each}
 			{/if}
 			{#if deck.description}
 				<span class="desc-text">{deck.description}</span>
