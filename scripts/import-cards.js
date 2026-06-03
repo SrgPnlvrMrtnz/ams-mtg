@@ -19,18 +19,17 @@ function mapCard(card) {
 		id: card.oracle_id,
 		name: card.name,
 		mana_cost: card.mana_cost ?? null,
-		cmc: card.cmc ?? 0,
+		cmc: typeof card.cmc === 'number' && isFinite(card.cmc) ? card.cmc : 0,
 		type_line: card.type_line ?? '',
 		oracle_text: card.oracle_text ?? null,
 		power: card.power ?? null,
 		toughness: card.toughness ?? null,
 		loyalty: card.loyalty ?? null,
-		colors: JSON.stringify(card.colors ?? []),
-		color_identity: JSON.stringify(card.color_identity ?? []),
-		keywords: JSON.stringify(card.keywords ?? []),
+		colors: JSON.stringify(Array.isArray(card.colors) ? card.colors : []),
+		color_identity: JSON.stringify(Array.isArray(card.color_identity) ? card.color_identity : []),
+		keywords: JSON.stringify(Array.isArray(card.keywords) ? card.keywords : []),
 		set_code: card.set ?? null,
-		rarity: card.rarity ?? null,
-		cluster_id: null
+		rarity: card.rarity ?? null
 	};
 }
 
@@ -53,7 +52,16 @@ async function importCards() {
 	let imported = 0;
 	for (let i = 0; i < filtered.length; i += BATCH_SIZE) {
 		const batch = filtered.slice(i, i + BATCH_SIZE).map(mapCard);
-		await prisma.card.createMany({ data: batch, skipDuplicates: true });
+		try {
+			await prisma.card.createMany({ data: batch });
+		} catch (e) {
+			const msg = e?.message ?? String(e);
+			// Extract the error reason (last non-empty line after the data dump)
+			const lines = msg.split('\n').filter((l) => l.trim());
+			const reason = lines.slice(-5).join('\n');
+			console.error(`\nBatch error at index ${i}:\n${reason}`);
+			throw e;
+		}
 		imported += batch.length;
 		process.stdout.write(`\rImported ${imported} / ${filtered.length}`);
 	}
