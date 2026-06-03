@@ -34,7 +34,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				colors: true,
 				color_identity: true,
 				rarity: true,
-				cluster_id: true
+				tags: true
 			},
 			orderBy: { name: 'asc' },
 			skip: (page - 1) * pageSize,

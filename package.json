@@ -7,6 +7,7 @@
 		"setup": "powershell -ExecutionPolicy Bypass -File scripts/setup.ps1",
 		"generate-secret": "powershell -ExecutionPolicy Bypass -File scripts/generate-secret.ps1",
 		"import-cards": "node scripts/import-cards.js",
+		"tag-cards": "python python/tag_cards.py",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",

@@ -5,30 +5,30 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ params }) => {
 	const card = await db.card.findUnique({
 		where: { id: params.id },
-		select: { cluster_id: true }
+		select: { tags: true }
 	});
 
 	if (!card) throw error(404, 'Card not found');
 
-	if (card.cluster_id === null) {
-		return json({ cards: [], message: 'Clustering not yet run' });
+	const tags: string[] = JSON.parse(card.tags);
+
+	if (tags.length === 0) {
+		return json({ cards: [] });
 	}
 
-	const similar = await db.card.findMany({
-		where: { cluster_id: card.cluster_id, id: { not: params.id } },
-		select: {
-			id: true,
-			name: true,
-			mana_cost: true,
-			cmc: true,
-			type_line: true,
-			colors: true,
-			rarity: true,
-			cluster_id: true
-		},
-		take: 6,
-		orderBy: { name: 'asc' }
-	});
+	// Build a score expression: sum of LIKE matches per tag
+	const tagConditions = tags.map((t) => `(tags LIKE '%"${t}"%')`).join(' + ');
+
+	const similar = await db.$queryRawUnsafe<
+		{ id: string; name: string; mana_cost: string | null; cmc: number; type_line: string; colors: string; rarity: string | null; tags: string }[]
+	>(
+		`SELECT id, name, mana_cost, cmc, type_line, colors, rarity, tags
+		 FROM "Card"
+		 WHERE id != ? AND tags != '[]' AND type_line NOT LIKE '%Land%'
+		 ORDER BY (${tagConditions}) DESC
+		 LIMIT 6`,
+		params.id
+	);
 
 	return json({ cards: similar });
 };

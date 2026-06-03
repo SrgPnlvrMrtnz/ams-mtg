@@ -50,5 +50,5 @@ model Card {
   keywords       String
   set_code       String?
   rarity         String?
-  cluster_id     Int?
+  tags           String  @default("[]")
 }

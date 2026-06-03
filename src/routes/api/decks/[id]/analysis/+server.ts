@@ -2,17 +2,26 @@ import { json, error } from '@sveltejs/kit';
 import db from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
-const CLUSTER_NAMES: Record<number, string> = {
-	0: 'Cluster 0',
-	1: 'Cluster 1',
-	2: 'Cluster 2',
-	3: 'Cluster 3',
-	4: 'Cluster 4',
-	5: 'Cluster 5',
-	6: 'Cluster 6',
-	7: 'Cluster 7',
-	8: 'Cluster 8',
-	9: 'Cluster 9'
+const TAG_LABELS: Record<string, string> = {
+	'bajo-coste': 'Bajo coste (cmc ≤ 2)',
+	'coste-medio': 'Coste medio (cmc 3-4)',
+	'alto-coste': 'Alto coste (cmc ≥ 5)',
+	criatura: 'Criaturas',
+	instantaneo: 'Instantáneos',
+	conjuro: 'Conjuros',
+	artefacto: 'Artefactos',
+	encantamiento: 'Encantamientos',
+	tierra: 'Tierras',
+	planeswalker: 'Planeswalkers',
+	remocion: 'Remoción',
+	'robo-cartas': 'Robo de cartas',
+	ramp: 'Aceleración de maná',
+	contrahechizo: 'Contrahechizos',
+	tokens: 'Generación de tokens',
+	evasion: 'Evasión',
+	proteccion: 'Protección',
+	vida: 'Ganancia de vida',
+	'daño-directo': 'Daño directo'
 };
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -27,25 +36,28 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	const cards = await db.card.findMany({
 		where: { name: { in: cardNames } },
-		select: { name: true, cluster_id: true }
+		select: { name: true, tags: true }
 	});
 
 	const total = cards.length;
-	const counts: Record<number, number> = {};
+	const tagCounts: Record<string, number> = {};
 	let untagged = 0;
 
 	for (const card of cards) {
-		if (card.cluster_id === null) {
+		const tags: string[] = JSON.parse(card.tags);
+		if (tags.length === 0) {
 			untagged++;
 		} else {
-			counts[card.cluster_id] = (counts[card.cluster_id] ?? 0) + 1;
+			for (const tag of tags) {
+				tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+			}
 		}
 	}
 
-	const distribution = Object.entries(counts)
-		.map(([clusterId, count]) => ({
-			cluster_id: Number(clusterId),
-			name: CLUSTER_NAMES[Number(clusterId)] ?? `Cluster ${clusterId}`,
+	const distribution = Object.entries(tagCounts)
+		.map(([tag, count]) => ({
+			tag,
+			label: TAG_LABELS[tag] ?? tag,
 			count,
 			percentage: Math.round((count / total) * 100)
 		}))
@@ -53,18 +65,20 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	const alerts: string[] = [];
 
-	for (const entry of distribution) {
-		if (entry.percentage > 60) {
-			alerts.push(
-				`El mazo tiene demasiadas cartas de "${entry.name}" (${entry.percentage}%). Considera diversificar.`
-			);
-		}
+	if (!tagCounts['remocion']) alerts.push('Tu mazo no tiene remoción.');
+	if (!tagCounts['robo-cartas']) alerts.push('Tu mazo no tiene robo de cartas.');
+	if (!tagCounts['ramp']) alerts.push('Tu mazo no tiene aceleración de maná.');
+	if (!tagCounts['bajo-coste']) alerts.push('Tu mazo carece de jugadas tempranas (sin cartas de bajo coste).');
+
+	const highCostPct = ((tagCounts['alto-coste'] ?? 0) / total) * 100;
+	if (highCostPct > 50) {
+		alerts.push(
+			`Demasiadas cartas de alto coste (${Math.round(highCostPct)}%). Considera añadir más ramp o reducir el coste medio.`
+		);
 	}
 
 	if (untagged > 0) {
-		alerts.push(
-			`${untagged} carta(s) no encontradas en el catálogo o sin cluster asignado.`
-		);
+		alerts.push(`${untagged} carta(s) no encontradas en el catálogo.`);
 	}
 
 	return json({ distribution, alerts, total, untagged });
