@@ -2,6 +2,17 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
+	type ApiCard = {
+		id: string;
+		name: string;
+		mana_cost: string | null;
+		cmc: number;
+		type_line: string;
+		colors: string;
+		rarity: string | null;
+		tags: string;
+	};
+
 	async function logout() {
 		await fetch('/api/auth/logout', { method: 'POST' });
 		goto('/login');
@@ -13,21 +24,26 @@
 	let numPagina = $state(1);
 	let cargando = $state(false);
 	let statusMsg = $state('');
-	let cartas: any[] = $state([]);
+	let cartas: ApiCard[] = $state([]);
+	let imagenesCartas: Record<string, string> = $state({});
+	let hayMas = $state(false);
+
+	let analisisVisible = $state(false);
+	let analisisData: { distribution: { tag: string; label: string; count: number; percentage: number }[]; alerts: string[]; total: number } | null = $state(null);
+	let cargandoAnalisis = $state(false);
 
 	let favoritos: string[] = $state([]);
 	let mazos: Record<string, string[]> = $state({});
 	let mazoSeleccionado = $state('');
 	let nuevoMazoNombre = $state('');
-	let cartaSeleccionada = $state<any>(null);
 
 	const frasesMagicas = [
-		'Consultando el Oráculo de Scryfall...',
+		'Consultando los pergaminos del oráculo...',
 		'Canalizando maná de las tierras lejanas...',
 		'Invocando criaturas del Multiverso...',
 		'Tejiendo los hilos del Éter...',
 		'Buscando reliquias en las ruinas de Dominaria...',
-		'Leyendo los pergaminos antiguos...',
+		'Leyendo los tomos olvidados...',
 		'Explorando los planos de existencia...'
 	];
 
@@ -41,47 +57,99 @@
 		rellenarPaginaCartas(0);
 	});
 
-	async function buscarCarta(texto: string, p: number) {
-		let query = texto || '';
-		if (colorSeleccionado) query += ` c:${colorSeleccionado}`;
-		if (!query) query = 'is:spells';
-		const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&page=${p + 1}`;
-		const res = await fetch(url);
+	async function fetchImages(names: string[]): Promise<Record<string, string>> {
+		if (names.length === 0) return {};
+		try {
+			const res = await fetch('https://api.scryfall.com/cards/collection', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ identifiers: names.map((name) => ({ name })) })
+			});
+			if (!res.ok) return {};
+			const data = await res.json();
+			const map: Record<string, string> = {};
+			for (const card of data.data ?? []) {
+				const img = card.image_uris?.png ?? card.card_faces?.[0]?.image_uris?.png;
+				if (img) map[card.name] = img;
+			}
+			return map;
+		} catch {
+			return {};
+		}
+	}
+
+	async function buscarCartas(texto: string, p: number) {
+		const params = new URLSearchParams();
+		if (texto) params.set('q', texto);
+		if (colorSeleccionado) params.set('colors', colorSeleccionado);
+		params.set('page', String(p + 1));
+		const res = await fetch(`/api/cards?${params}`);
+		if (!res.ok) throw new Error('API error');
 		return res.json();
 	}
 
 	async function rellenarPaginaCartas(p: number) {
 		cartas = [];
+		imagenesCartas = {};
 		cargando = true;
 		statusMsg = fraseMagicaAleatoria();
 		try {
-			const data = await buscarCarta(textoBusqueda, p);
-			cargando = false;
-			if (!data.data || data.data.length === 0) {
+			const data = await buscarCartas(textoBusqueda, p);
+			if (!data.cards || data.cards.length === 0) {
 				statusMsg = 'No se encontraron cartas.';
 			} else {
 				statusMsg = '';
-				cartas = data.data;
+				cartas = data.cards;
+				hayMas = data.hasMore;
+				imagenesCartas = await fetchImages(cartas.map((c) => c.name));
 			}
 		} catch {
-			cargando = false;
 			statusMsg = 'Error de red. Inténtalo de nuevo.';
+		} finally {
+			cargando = false;
 		}
 	}
 
 	async function cartaAleatoria() {
 		cartas = [];
+		imagenesCartas = {};
 		cargando = true;
 		statusMsg = 'Buscando una carta aleatoria...';
 		try {
 			const res = await fetch('https://api.scryfall.com/cards/random');
-			const carta = await res.json();
-			cargando = false;
+			const sc = await res.json();
 			statusMsg = '';
-			cartas = [carta];
+			const imgUrl = sc.image_uris?.png ?? sc.card_faces?.[0]?.image_uris?.png ?? '';
+
+			// Try to find in our catalog
+			const apiRes = await fetch(`/api/cards?q=${encodeURIComponent(sc.name)}&page=1`);
+			if (apiRes.ok) {
+				const apiData = await apiRes.json();
+				const found = apiData.cards?.find((c: ApiCard) => c.name === sc.name);
+				if (found) {
+					cartas = [found];
+					hayMas = false;
+					if (imgUrl) imagenesCartas = { [found.name]: imgUrl };
+					return;
+				}
+			}
+			// Fallback for cards not in our catalog
+			cartas = [{
+				id: sc.oracle_id ?? '',
+				name: sc.name,
+				mana_cost: sc.mana_cost ?? null,
+				cmc: sc.cmc ?? 0,
+				type_line: sc.type_line ?? '',
+				colors: JSON.stringify(sc.colors ?? []),
+				rarity: sc.rarity ?? null,
+				tags: '[]'
+			}];
+			hayMas = false;
+			if (imgUrl) imagenesCartas = { [sc.name]: imgUrl };
 		} catch {
-			cargando = false;
 			statusMsg = 'Error de red. Inténtalo de nuevo.';
+		} finally {
+			cargando = false;
 		}
 	}
 
@@ -92,6 +160,7 @@
 	}
 
 	function siguiente() {
+		if (!hayMas) return;
 		puntero++;
 		numPagina = puntero + 1;
 		rellenarPaginaCartas(puntero);
@@ -154,26 +223,29 @@
 		localStorage.setItem('mtg_mazos', JSON.stringify(mazos));
 	}
 
-	function verDetalle(carta: any) {
-		cartaSeleccionada = carta;
-	}
-
-	function cerrarDetalle() {
-		cartaSeleccionada = null;
-	}
-
-	function getImageUrl(carta: any): string {
-		if (carta.image_uris?.png) return carta.image_uris.png;
-		if (carta.card_faces?.[0]?.image_uris?.png) return carta.card_faces[0].image_uris.png;
-		return '';
+	async function analizarMazo() {
+		if (!mazoSeleccionado || !mazos[mazoSeleccionado]?.length) return;
+		analisisVisible = true;
+		analisisData = null;
+		cargandoAnalisis = true;
+		try {
+			const res = await fetch('/api/decks/analyze', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ cards: mazos[mazoSeleccionado] })
+			});
+			if (res.ok) analisisData = await res.json();
+		} finally {
+			cargandoAnalisis = false;
+		}
 	}
 
 	const manaColors = [
-		{ code: 'w', label: 'Blanco', symbol: 'W', cls: 'mana-w' },
-		{ code: 'u', label: 'Azul',   symbol: 'U', cls: 'mana-u' },
-		{ code: 'b', label: 'Negro',  symbol: 'B', cls: 'mana-b' },
-		{ code: 'r', label: 'Rojo',   symbol: 'R', cls: 'mana-r' },
-		{ code: 'g', label: 'Verde',  symbol: 'G', cls: 'mana-g' }
+		{ code: 'W', label: 'Blanco', symbol: 'W', cls: 'mana-w' },
+		{ code: 'U', label: 'Azul',   symbol: 'U', cls: 'mana-u' },
+		{ code: 'B', label: 'Negro',  symbol: 'B', cls: 'mana-b' },
+		{ code: 'R', label: 'Rojo',   symbol: 'R', cls: 'mana-r' },
+		{ code: 'G', label: 'Verde',  symbol: 'G', cls: 'mana-g' }
 	];
 </script>
 
@@ -311,107 +383,45 @@
 			</div>
 		{/if}
 
+		{#if !cargando}
 		<div class="card-grid">
 			{#each cartas as carta}
-				{@const imgUrl = getImageUrl(carta)}
-				{#if imgUrl}
-					<article class="card-item">
-						<img src={imgUrl} alt={carta.name} loading="lazy" onclick={() => verDetalle(carta)} style="cursor:pointer;" />
-						<div class="card-actions">
-							<button
-								class="card-action-btn action-fav"
-								onclick={() => agregarFavorito(carta.name)}
-								title="Añadir a favoritos"
-							>
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-									<path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z" />
-									<path d="M6.97 5.678a.75.75 0 0 1 .638-.428h.784a.75.75 0 0 1 .638.428l.24.484.52-.066a.75.75 0 0 1 .853.588.75.75 0 0 1-.193.676l-.378.368.089.519a.75.75 0 0 1-1.086.79L8 8.56l-.465.479a.75.75 0 0 1-1.086-.79l.089-.52-.378-.367a.75.75 0 0 1 .66-1.264l.52.066.24-.484Z" />
-								</svg>
-								Favorito
-							</button>
-							<button
-								class="card-action-btn action-deck"
-								onclick={() => agregarAlMazo(carta.name)}
-								title="Añadir al mazo"
-							>
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-									<path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-								</svg>
-								Al mazo
-							</button>
-						</div>
-					</article>
-				{/if}
+				{@const imgUrl = imagenesCartas[carta.name]}
+				<article class="card-item">
+					{#if imgUrl}
+						<img src={imgUrl} alt={carta.name} loading="lazy" />
+					{:else}
+						<div class="card-placeholder"><span>{carta.name}</span></div>
+					{/if}
+					<div class="card-actions">
+						<button
+							class="card-action-btn action-fav"
+							onclick={(e) => { e.stopPropagation(); agregarFavorito(carta.name); }}
+							title="Añadir a favoritos"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+								<path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z" />
+								<path d="M6.97 5.678a.75.75 0 0 1 .638-.428h.784a.75.75 0 0 1 .638.428l.24.484.52-.066a.75.75 0 0 1 .853.588.75.75 0 0 1-.193.676l-.378.368.089.519a.75.75 0 0 1-1.086.79L8 8.56l-.465.479a.75.75 0 0 1-1.086-.79l.089-.52-.378-.367a.75.75 0 0 1 .66-1.264l.52.066.24-.484Z" />
+							</svg>
+							Favorito
+						</button>
+						<button
+							class="card-action-btn action-deck"
+							onclick={(e) => { e.stopPropagation(); agregarAlMazo(carta.name); }}
+							title="Añadir al mazo"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+								<path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+							</svg>
+							Al mazo
+						</button>
+					</div>
+				</article>
 			{/each}
 		</div>
-	</section>
+		{/if}
 
-	{#if cartaSeleccionada}
-		{@const img = getImageUrl(cartaSeleccionada)}
-		<div
-			class="detalle-overlay"
-			role="button"
-			tabindex="-1"
-			onclick={cerrarDetalle}
-			onkeydown={(e) => e.key === 'Escape' && cerrarDetalle()}
-		>
-			<div class="detalle-panel" onclick={(e) => e.stopPropagation()}>
-				<button class="detalle-cerrar" onclick={cerrarDetalle} title="Cerrar">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-						<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-					</svg>
-				</button>
-				<div class="detalle-body">
-					{#if img}
-						<img class="detalle-img" src={img} alt={cartaSeleccionada.name} />
-					{/if}
-					<div class="detalle-info">
-						<h2 class="detalle-nombre">{cartaSeleccionada.name}</h2>
-						{#if cartaSeleccionada.mana_cost}
-							<div class="detalle-fila">
-								<span class="detalle-label">Coste</span>
-								<span class="detalle-valor mana">{cartaSeleccionada.mana_cost}</span>
-							</div>
-						{/if}
-						{#if cartaSeleccionada.type_line}
-							<div class="detalle-fila">
-								<span class="detalle-label">Tipo</span>
-								<span class="detalle-valor">{cartaSeleccionada.type_line}</span>
-							</div>
-						{/if}
-						{#if cartaSeleccionada.oracle_text}
-							<div class="detalle-fila detalle-texto">
-								<span class="detalle-label">Texto</span>
-								<span class="detalle-valor oracle">{cartaSeleccionada.oracle_text}</span>
-							</div>
-						{/if}
-						{#if cartaSeleccionada.power}
-							<div class="detalle-fila">
-								<span class="detalle-label">F/R</span>
-								<span class="detalle-valor">{cartaSeleccionada.power}/{cartaSeleccionada.toughness}</span>
-							</div>
-						{/if}
-						{#if cartaSeleccionada.loyalty}
-							<div class="detalle-fila">
-								<span class="detalle-label">Lealtad</span>
-								<span class="detalle-valor">{cartaSeleccionada.loyalty}</span>
-							</div>
-						{/if}
-						<div class="detalle-fila">
-							<span class="detalle-label">Rareza</span>
-							<span class="detalle-valor rarity-{cartaSeleccionada.rarity}">{cartaSeleccionada.rarity}</span>
-						</div>
-						{#if cartaSeleccionada.set_name}
-							<div class="detalle-fila">
-								<span class="detalle-label">Set</span>
-								<span class="detalle-valor">{cartaSeleccionada.set_name}</span>
-							</div>
-						{/if}
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
+	</section>
 
 	<!-- Sidebar: Mazos -->
 	<aside class="panel">
@@ -448,14 +458,8 @@
 		{/if}
 
 		{#if mazoSeleccionado && mazos[mazoSeleccionado]}
-			<div class="deck-count-row">
-				<span class="deck-count">
-					{mazos[mazoSeleccionado].length}
-					{mazos[mazoSeleccionado].length === 1 ? 'carta' : 'cartas'}
-				</span>
-				<a href="/mazo/{encodeURIComponent(mazoSeleccionado)}" class="btn btn-primary ver-mazo-btn">
-					Ver mazo
-				</a>
+			<div class="deck-count">
+				{mazos[mazoSeleccionado].length} {mazos[mazoSeleccionado].length === 1 ? 'carta' : 'cartas'}
 			</div>
 			{#if mazos[mazoSeleccionado].length === 0}
 				<p class="empty-hint">Este mazo está vacío.</p>
@@ -472,6 +476,46 @@
 						</li>
 					{/each}
 				</ul>
+				<button class="btn btn-primary analyze-btn" onclick={analizarMazo}>
+					Analizar mazo
+				</button>
+			{/if}
+
+			{#if analisisVisible}
+				<div class="analysis-panel">
+					<div class="analysis-header">
+						<span>Análisis</span>
+						<button class="btn-icon btn-remove" title="Cerrar" onclick={() => { analisisVisible = false; analisisData = null; }}>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+								<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+							</svg>
+						</button>
+					</div>
+					{#if cargandoAnalisis}
+						<p class="status-text" style="font-size:11px;">Analizando...</p>
+					{:else if analisisData}
+						{#if analisisData.alerts.length === 0}
+							<div class="alert-ok">✓ Mazo equilibrado</div>
+						{:else}
+							<div class="alerts-list">
+								{#each analisisData.alerts as alerta}
+									<div class="alert-item">⚠ {alerta}</div>
+								{/each}
+							</div>
+						{/if}
+						<div class="tag-distribution">
+							{#each analisisData.distribution.slice(0, 8) as entry}
+								<div class="tag-row">
+									<span class="tag-label">{entry.label}</span>
+									<div class="tag-bar">
+										<div class="tag-fill" style="width:{entry.percentage}%"></div>
+									</div>
+									<span class="tag-count">{entry.count}</span>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
 			{/if}
 		{/if}
 	</aside>
@@ -972,24 +1016,11 @@
 		margin-bottom: 5px;
 	}
 
-	.deck-count-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 8px;
-		gap: 8px;
-	}
-
 	.deck-count {
 		font-size: 11px;
 		color: var(--text-muted);
+		margin-bottom: 8px;
 		font-weight: 500;
-	}
-
-	.ver-mazo-btn {
-		font-size: 11px;
-		padding: 5px 10px;
-		flex-shrink: 0;
 	}
 
 	/* ── Card area ─────────────────────────────────────────────────── */
@@ -1124,124 +1155,110 @@
 		color: #fff;
 	}
 
-	/* ── Card detail overlay ───────────────────────────────────────── */
-	.detalle-overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.72);
-		backdrop-filter: blur(4px);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 200;
-		padding: 20px;
-	}
-
-	.detalle-panel {
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
+	/* ── Card placeholder ──────────────────────────────────────────── */
+	.card-placeholder {
 		width: 100%;
-		max-width: 680px;
-		max-height: 90vh;
-		overflow-y: auto;
-		position: relative;
-		scrollbar-width: thin;
-		scrollbar-color: var(--border) transparent;
-	}
-
-	.detalle-cerrar {
-		position: absolute;
-		top: 12px;
-		right: 12px;
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
-		border: 1px solid var(--border);
+		aspect-ratio: 488 / 680;
 		background: var(--surface-2);
-		color: var(--text-secondary);
-		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: background 0.15s, color 0.15s;
-		z-index: 1;
-	}
-
-	.detalle-cerrar:hover {
-		background: var(--danger);
-		color: #fff;
-		border-color: var(--danger);
-	}
-
-	.detalle-cerrar svg {
-		width: 14px;
-		height: 14px;
-	}
-
-	.detalle-body {
-		display: flex;
-		gap: 20px;
-		padding: 20px;
-	}
-
-	.detalle-img {
-		width: 220px;
-		flex-shrink: 0;
-		border-radius: var(--radius);
-		align-self: flex-start;
-	}
-
-	.detalle-info {
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		padding-top: 4px;
-	}
-
-	.detalle-nombre {
-		margin: 0 0 4px;
-		font-size: 18px;
-		font-weight: 700;
-		color: var(--text-primary);
-		line-height: 1.3;
-	}
-
-	.detalle-fila {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.detalle-label {
-		font-size: 10px;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
+		padding: 12px;
+		text-align: center;
+		font-size: 11px;
 		color: var(--text-muted);
 	}
 
-	.detalle-valor {
-		font-size: 13px;
-		color: var(--text-primary);
-		line-height: 1.5;
+	/* ── Deck analysis ─────────────────────────────────────────────── */
+	.analyze-btn {
+		width: 100%;
+		margin-top: 10px;
+		justify-content: center;
 	}
 
-	.detalle-valor.mana {
-		color: var(--gold);
+	.analysis-panel {
+		margin-top: 10px;
+		background: var(--surface-2);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 10px;
+	}
+
+	.analysis-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 12px;
 		font-weight: 600;
+		color: var(--text-primary);
+		margin-bottom: 8px;
 	}
 
-	.detalle-valor.oracle {
+	.alerts-list {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin-bottom: 10px;
+	}
+
+	.alert-item {
+		background: var(--danger-dim);
+		color: var(--danger);
+		border: 1px solid rgba(224, 67, 74, 0.3);
+		border-radius: var(--radius-sm);
+		padding: 5px 8px;
+		font-size: 10px;
+		line-height: 1.4;
+	}
+
+	.alert-ok {
+		color: var(--green);
+		font-size: 11px;
+		margin-bottom: 8px;
+		font-weight: 500;
+	}
+
+	.tag-distribution {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+
+	.tag-row {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+	}
+
+	.tag-label {
+		font-size: 10px;
 		color: var(--text-secondary);
-		white-space: pre-wrap;
+		width: 88px;
+		flex-shrink: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
-	.rarity-common { color: var(--text-secondary); }
-	.rarity-uncommon { color: #a8c4d4; }
-	.rarity-rare { color: var(--gold); }
-	.rarity-mythic { color: #e87c3e; }
+	.tag-bar {
+		flex: 1;
+		height: 5px;
+		background: var(--surface);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+
+	.tag-fill {
+		height: 100%;
+		background: var(--accent);
+		border-radius: 3px;
+	}
+
+	.tag-count {
+		font-size: 10px;
+		color: var(--text-muted);
+		width: 16px;
+		text-align: right;
+		flex-shrink: 0;
+	}
 </style>
