@@ -2,7 +2,14 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
+	//$state es el PROTAGONISTA: Es el dato original. Tú decides cuándo cambia, tú lo modificas directamente.
+	//$derived es el ESPECTADOR: Solo mira. Él nunca cambia el valor por sí mismo; simplemente "calcula" el resultado basándose en lo que dice el protagonista.
+
+	//a state le asignas algo, a derived  le asignas por ejemplo (precio * 0,21) y ya ella te va dando los resultados, es para calculos o logica
 	let { data } = $props();
+
+	// 1. $state: Declaramos variables que Svelte va a "vigilar".
+    // Si cambian, la interfaz se actualiza sola.
 
 	let deckName = $state('');
 	let mazos: Record<string, string[]> = $state({});
@@ -17,18 +24,38 @@
 
 	function verDetalle(carta: any) { cartaSeleccionada = carta; }
 	function cerrarDetalle() { cartaSeleccionada = null; }
+	
+	// 1. $derived está "escuchando" constantemente los cambios en la variable 'mazos'.
+	// Si 'mazos' cambia (por ejemplo, si añades o quitas una carta), 
+	// Svelte vuelve a ejecutar automáticamente esta lógica.
 
+	// 'cartasEnMazo' siempre tendrá el valor actualizado de la lista de cartas,
+	// o un array vacío [] si 'mazos[deckName]' aún no existe.
 	const cartasEnMazo = $derived(mazos[deckName] || []);
+
+	// 2. 'totalCartas' depende directamente de 'cartasEnMazo'.
+	// Como 'cartasEnMazo' ya es reactivo (gracias a la línea anterior),
+	// Svelte sabe que cuando 'cartasEnMazo' cambie, 'totalCartas' también debe cambiar.
 	const totalCartas = $derived(cartasEnMazo.length);
 
+	//derived.by es para funciones
+
 	const cartasAgrupadas = $derived.by(() => {
-		const conteo: Record<string, number> = {};
-		for (const c of mazos[deckName] || []) {
-			conteo[c] = (conteo[c] || 0) + 1;
-		}
-		return Object.entries(conteo)
-			.map(([nombre, cantidad]) => ({ nombre, cantidad }))
-			.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    // 1. Inicializamos un objeto vacío para contar las cartas
+    const conteo: Record<string, number> = {};
+
+    // 2. Bucle: recorremos el array de cartas
+    // Svelte sabe que si 'mazos[deckName]' cambia, esto debe ejecutarse de nuevo.
+    for (const c of mazos[deckName] || []) {
+        conteo[c] = (conteo[c] || 0) + 1; // Sumamos 1 cada vez que aparece la carta 'c'
+    }
+
+    // 3. Transformación y Orden:
+    // Convertimos el objeto a un array de objetos { nombre, cantidad }
+    // y lo ordenamos alfabéticamente.
+    return Object.entries(conteo)
+        .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
 	});
 
 	onMount(async () => {
