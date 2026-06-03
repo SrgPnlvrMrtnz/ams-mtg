@@ -39,9 +39,9 @@ def parse_numeric(val):
         return None
     if isinstance(val, (int, float)):
         return float(val)
-    # Replace * and similar with None
-    cleaned = re.sub(r'[^0-9.\-]', '', str(val))
-    return float(cleaned) if cleaned else None
+    # Extract leading number (handles '*', '7-', '+2', etc.)
+    m = re.match(r'^[+-]?\d+(\.\d+)?', str(val).strip())
+    return float(m.group()) if m else None
 
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
