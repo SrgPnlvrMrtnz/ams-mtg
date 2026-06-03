@@ -162,45 +162,37 @@ El endpoint `POST /api/decks/analyze` recibe la lista de cartas del mazo y devue
 
 ### Primer arranque (tras clonar)
 
-```powershell
-npm run setup
-```
-
-Este script:
-1. Copia `.env.example` a `.env` si no existe (edítalo antes de continuar).
-2. Ejecuta las migraciones de Prisma para crear la base de datos.
-3. Pregunta si importar el catálogo de cartas (~165 MB, ~34 000 cartas).
-
-### Generar un JWT_SECRET
+**1. Genera un JWT_SECRET** y cópialo en `.env`:
 
 ```powershell
 npm run generate-secret
 ```
-
-Copia el valor generado en tu `.env`:
 
 ```env
 JWT_SECRET="el-valor-generado"
 DATABASE_URL="file:./dev.db"
 ```
 
-### Importar el catálogo de cartas
-
-```powershell
-npm run import-cards
-```
-
-Descarga `oracle_cards` de Scryfall e inserta las cartas en SQLite.
-
-### Etiquetar las cartas con IA
+**2. Instala las dependencias Python** (solo la primera vez):
 
 ```powershell
 cd python
 pip install -r requirements.txt
-python tag_cards.py
+cd ..
 ```
 
-Asigna etiquetas funcionales a las ~34 000 cartas de la base de datos.
+**3. Ejecuta el setup completo:**
+
+```powershell
+npm run setup
+```
+
+Este script realiza todo el proceso en orden:
+
+1. Crea `.env` desde `.env.example` si no existe, y para para que lo edites.
+2. Ejecuta las migraciones de Prisma y crea la tabla de cartas en SQLite.
+3. Descarga el catálogo `oracle_cards` de Scryfall (~165 MB, ~34 000 cartas) e inserta las cartas en la base de datos.
+4. Ejecuta `python/tag_cards.py` para etiquetar todas las cartas con sus roles funcionales (destrucción, ramp, robo de cartas, etc.).
 
 ### Iniciar el servidor de desarrollo
 
