@@ -34,3 +34,21 @@ model Deck {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Card {
+  id             String  @id
+  name           String
+  mana_cost      String?
+  cmc            Float
+  type_line      String
+  oracle_text    String?
+  power          String?
+  toughness      String?
+  loyalty        String?
+  colors         String
+  color_identity String
+  keywords       String
+  set_code       String?
+  rarity         String?
+  cluster_id     Int?
+}
