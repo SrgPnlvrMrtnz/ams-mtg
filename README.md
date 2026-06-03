@@ -1,349 +1,263 @@
-# AMS MTG — Aplicación Web Todo-en-Uno de Magic: The Gathering
+# AMS MTG — Aplicación Web para Magic: The Gathering
 
-![SvelteKit](https://img.shields.io/badge/SvelteKit-FF3E00?style=for-the-badge&logo=svelte&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Scryfall API](https://img.shields.io/badge/Scryfall-API-1a1a2e?style=for-the-badge)
-
-> Aplicación web académica diseñada para centralizar todas las herramientas necesarias para jugar y gestionar Magic: The Gathering: buscador de cartas, creación y administración de mazos, un completo sistema de seguimiento de partidas, y un asistente de recomendación de cartas basado en clustering.
+Proyecto académico desarrollado con **SvelteKit + TypeScript**. Es una plataforma web para jugadores de Magic: The Gathering que centraliza el buscador de cartas y la gestión de mazos en una sola interfaz.
 
 ---
 
-## Tabla de Contenidos
+## Estado actual de la rama `backend`
 
-- [Descripción del Proyecto](#descripción-del-proyecto)
-- [Funcionalidades](#funcionalidades)
-- [Asistente de Mazos con Clustering](#asistente-de-mazos-con-clustering)
-- [Arquitectura Objetivo](#arquitectura-objetivo)
-- [Tecnologías](#tecnologías)
-- [Integración con la API de Scryfall](#integración-con-la-api-de-scryfall)
-- [Instalación y Desarrollo](#instalación-y-desarrollo)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Roadmap](#roadmap)
-- [Equipo](#equipo)
+Esta rama contiene la aplicación funcional con las siguientes características implementadas:
 
----
-
-## Descripción del Proyecto
-
-**AMS MTG** es una aplicación web todo-en-uno para jugadores de Magic: The Gathering, desarrollada como proyecto académico con el objetivo de sustituir el uso de múltiples herramientas dispersas por una única plataforma centralizada.
-
-El proyecto combina cuatro grandes módulos en una sola aplicación:
-
-1. **Buscador de cartas** — Consulta en tiempo real la base de datos completa de Scryfall con filtros avanzados por color de maná, tipo de carta y nombre.
-2. **Gestor de mazos** — Creación, edición y organización de mazos con persistencia local y, en versiones futuras, en la nube.
-3. **Modo combate / Battle Arena** — Sistema de seguimiento de partidas multijugador con control de vidas, contadores, dado y moneda animados, rastreo de daño de comandante y registro histórico de acciones.
-4. **Asistente de mazos** — Módulo avanzado de recomendación de cartas basado en clustering (Python), que detecta desequilibrios en el mazo y sugiere cartas similares o complementarias.
-
----
-
-## Funcionalidades
-
-### Buscador de Cartas
-
-- Búsqueda por nombre integrada con la **API de Scryfall** en tiempo real.
-- **Filtros por color de maná**: Blanco ☀️, Azul 💧, Negro 💀, Rojo 🔥, Verde 🌳.
-- Botón de carta **aleatoria** para explorar el catálogo de Magic.
-- **Paginación** de resultados con navegación entre páginas.
-- Visualización de imagen, nombre y tipo de carta en cuadrícula responsiva.
-
-### Gestión de Mazos y Favoritos
-
-- Marcar cartas como **favoritas** (guardadas en local).
-- Crear **múltiples mazos** con nombre personalizado.
-- Agregar y eliminar cartas de cualquier mazo.
-- Persistencia automática: los datos se conservan entre sesiones del navegador.
-
-### Modo Combate (Battle Arena)
-
-- Agregar cualquier número de **jugadores** con nombre y vida inicial (20 o 40).
-- Botones +/− con pulsación sostenida para cambio rápido de vida.
-- Animación de **vibración** al recibir daño.
-- Detección automática de **derrota** al llegar a 0 vidas, 10 de veneno, o 21 de daño de comandante.
-- Indicador de **victoria** con animación especial al quedar un solo jugador en pie.
-
-**Sistemas de contadores:**
-- Veneno (0–10, derrota automática a 10)
-- Daño de Comandante (por oponente, derrota a 21)
-- Monarca (único por partida, efecto visual dorado)
-- Tax (contador de impuesto, +2 incremental)
-
-**Herramientas de aleatoriedad:**
-- Dado D20 con animación de rotación 3D.
-- Moneda con animación de lanzamiento 3D (cara/cruz).
-
-**Búsqueda de Comandante:**
-- Autocompletado integrado con Scryfall usando el filtro `is:commander`.
-- La imagen del comandante elegido se aplica como fondo de la tarjeta del jugador.
-
-**Historial de partida:**
-- Panel flotante con las últimas 50 acciones registradas.
-- Cada entrada incluye timestamp y descripción de la acción.
-- Reinicio de partida sin borrar la configuración de jugadores.
-
----
-
-## Asistente de Mazos con Clustering
-
-Como mejora avanzada sobre el MVP, AMS MTG incluirá un módulo de recomendación de cartas construido en **Python** mediante técnicas de **clustering**. El objetivo no es construir automáticamente "el mejor mazo", sino asistir al jugador detectando desequilibrios y sugiriendo cartas afines a su estrategia.
-
-### ¿Qué hace el sistema?
-
-El script de clustering analiza el catálogo de cartas y las agrupa según sus características jugables, generando grupos como:
-
-- Cartas de coste bajo y juego rápido.
-- Criaturas grandes y de coste alto.
-- Instantáneos y conjuros de apoyo.
-- Tierras y cartas sin coste de maná.
-- Cartas defensivas o de protección.
-- Cartas multicolor.
-
-El algoritmo **no entiende Magic** como un jugador experto: detecta patrones en los datos y asigna a cada carta un identificador de cluster. La lógica de negocio (colores compatibles, curva de maná, legalidad en formato) se aplica por separado en las reglas de la aplicación.
-
-### Campos usados para el agrupamiento
-
-De la API de Scryfall y del JSON de cartas se utilizan los siguientes campos:
-
-| Campo | Descripción |
+| Módulo | Estado |
 |---|---|
-| `cmc` | Coste convertido de maná |
-| `colors` / `color_identity` | Colores de la carta |
-| `card_types` | Criatura, instantáneo, conjuro, tierra, artefacto... |
-| `keywords` | Habilidades y palabras clave |
-| `power` / `toughness` | Fuerza y resistencia (criaturas) |
-| `rarity` | Común, infrecuente, rara, mítica |
-| `legalities` | Formatos en los que la carta es legal |
-
-> Campos como artista, imagen o número de colección se usan solo para presentación visual, no para el clustering.
-
-### Funcionalidades del asistente
-
-- **Cartas similares**: al ver una carta, mostrar otras del mismo cluster.
-- **Variedad controlada**: sugerir cartas de clusters no representados en el mazo.
-- **Análisis del mazo**: detectar exceso de cartas caras, falta de hechizos baratos o escasez de tierras.
-- **Recomendaciones por estilo**: filtrar sugerencias por perfil agresivo, defensivo o de apoyo.
-- **Comparación de mazos**: indicar si dos mazos tienen perfiles jugables similares.
-
-Un ejemplo de mensaje que podría mostrar la aplicación:
-
-```
-Tu mazo tiene muchas criaturas de coste alto.
-Faltan cartas de coste 1-2.
-No tienes casi instantáneos de respuesta rápida.
-Sugerencia: revisa cartas de los clusters de coste bajo y apoyo defensivo.
-```
-
-### Flujo técnico
-
-```
-Scryfall JSON
-     │
-     ▼
-script Python (clustering)
- · limpieza de campos
- · normalización numérica
- · algoritmo de clustering (K-Means / DBSCAN)
- · exportación: cards_with_clusters.json
-     │
-     ▼
-Base de datos / JSON estático
-     │
-     ▼
-API Routes (SvelteKit)  ──►  Componente Asistente (frontend)
-```
-
-### Prioridad y alcance
-
-| Funcionalidad | Viabilidad | Prioridad |
-|---|---|---|
-| MVP (búsqueda, usuarios, mazos) | Alta | Primera fase |
-| Clustering básico de cartas | Alta | Segunda fase |
-| Recomendador de cartas similares | Media-alta | Segunda fase |
-| Constructor automático de mazos competitivos | Baja-media | Fuera de alcance |
+| Buscador de cartas con filtros por color | Implementado |
+| Paginación de resultados | Implementado |
+| Carta aleatoria | Implementado |
+| Modal de detalle de carta | Implementado |
+| Lista de cartas favoritas | Implementado |
+| Crear y eliminar mazos | Implementado |
+| Añadir y quitar cartas de un mazo | Implementado |
+| Página de detalle de mazo | Implementado |
+| Modo batalla (`/partida`) | Pendiente (enlace sin ruta) |
+| Autenticación de usuarios | Pendiente (botón sin backend) |
+| Módulo de recomendación con clustering (Python) | Pendiente |
 
 ---
 
-## Arquitectura Objetivo
+## Stack tecnológico
 
-La versión final del proyecto migrará a una arquitectura moderna basada en **SvelteKit** y **TypeScript**, con las siguientes capas:
-
-```
-┌─────────────────────────────────────────────────┐
-│                   Cliente                        │
-│         SvelteKit + TypeScript + Tailwind        │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
-│  │  Buscador│ │  Mazos   │ │  Battle Arena    │ │
-│  └──────────┘ └──────────┘ └──────────────────┘ │
-└───────────────────┬─────────────────────────────┘
-                    │ fetch / SvelteKit API routes
-┌───────────────────▼─────────────────────────────┐
-│             API Routes (SvelteKit)               │
-│  /api/cards · /api/decks · /api/sessions         │
-└───────────────────┬─────────────────────────────┘
-                    │
-        ┌───────────┴───────────┐
-        │                       │
-┌───────▼──────┐     ┌──────────▼──────────┐
-│ Scryfall API │     │  Base de Datos       │
-│ (externa)    │     │  (Supabase / Prisma) │
-└──────────────┘     └─────────────────────┘
-```
-
-### Decisiones de diseño
-
-**SvelteKit** fue elegido como framework frontend por su rendimiento nativo sin virtual DOM, su sistema de enrutamiento basado en archivos, y la integración directa de SSR (Server-Side Rendering) y API routes en un único proyecto. Esto simplifica la arquitectura al eliminar la necesidad de un backend separado para operaciones básicas.
-
-**TypeScript** garantiza tipado estático en todo el proyecto, facilitando el mantenimiento y la detección temprana de errores, especialmente al trabajar con la respuesta de la API de Scryfall, que devuelve objetos JSON complejos y variados según el tipo de carta.
-
----
-
-## Tecnologías
-
-| Tecnología | Rol | Justificación |
-|---|---|---|
-| **SvelteKit** | Framework web (objetivo) | SSR, routing, API routes integradas |
-| **TypeScript** | Lenguaje principal | Tipado estático, seguridad en desarrollo |
-| **Tailwind CSS** | Estilos | Utilidad, consistencia, rapid prototyping |
-| **Scryfall API** | Fuente de datos de cartas | Base de datos completa y gratuita de MTG |
-| **Python** | Clustering y análisis de cartas | Preprocesamiento de datos y agrupamiento (K-Means / DBSCAN) |
-| **Supabase** *(roadmap)* | Base de datos + Auth | PostgreSQL gestionado con SDK de JS/TS |
-| **HTML / CSS / JS** | Prototipo actual | Prueba de concepto funcional sin dependencias |
-
----
-
-## Integración con la API de Scryfall
-
-[Scryfall](https://scryfall.com/docs/api) es la base de datos pública más completa de Magic: The Gathering. AMS MTG utiliza los siguientes endpoints:
-
-| Endpoint | Uso en la app |
+| Tecnología | Rol |
 |---|---|
-| `GET /cards/search?q={query}` | Búsqueda de cartas por nombre |
-| `GET /cards/search?q=color:{c}` | Filtrado por color de maná |
-| `GET /cards/search?q=is:commander` | Búsqueda específica de comandantes |
-| `GET /cards/random` | Carta aleatoria |
-| `GET /cards/autocomplete?q={query}` | Autocompletado de nombres |
-
-La API es **gratuita, sin autenticación** y devuelve objetos JSON con imagen, nombre, tipo, coste de maná, texto de reglas y metadatos de cada carta.
-
----
-
-## Instalación y Desarrollo
-
-### Requisitos
-
-- Node.js >= 18
-- npm >= 9
-
-### Clonar e instalar
-
-```bash
-git clone https://github.com/tu-usuario/ams-mtg.git
-cd ams-mtg
-npm install
-```
-
-### Desarrollo local
-
-```bash
-npm run dev
-```
-
-La aplicación estará disponible en `http://localhost:5173`.
-
-### Construir para producción
-
-```bash
-npm run build
-npm run preview
-```
-
-### Variables de entorno
-
-Crear un archivo `.env` en la raíz del proyecto:
-
-```env
-# Scryfall no requiere API key.
-# Variables necesarias para la integración con Supabase (roadmap):
-PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-PUBLIC_SUPABASE_ANON_KEY=tu-clave-anonima
-```
+| SvelteKit 2 + Svelte 5 | Framework web (SSR + cliente) |
+| TypeScript | Tipado estático |
+| Vite | Build tool |
+| Tailwind CSS v4 | Estilos utilitarios |
+| Prisma + SQLite | ORM configurado (preparado, sin uso activo en esta versión) |
+| Scryfall API | Base de datos pública de cartas MTG |
 
 ---
 
-## Estructura del Proyecto
-
-Estructura objetivo del proyecto en SvelteKit:
+## Estructura del proyecto
 
 ```
 ams-mtg/
 ├── src/
 │   ├── lib/
-│   │   ├── api/
-│   │   │   └── scryfall.ts        # Cliente tipado para Scryfall API
-│   │   ├── components/
-│   │   │   ├── CardGrid.svelte    # Cuadrícula de cartas
-│   │   │   ├── DeckPanel.svelte   # Panel de gestión de mazos
-│   │   │   ├── PlayerCard.svelte  # Tarjeta de jugador en Battle Arena
-│   │   │   ├── DiceRoller.svelte  # Dado D20 animado
-│   │   │   └── CoinFlip.svelte    # Moneda animada
-│   │   ├── stores/
-│   │   │   ├── decks.ts           # Estado global de mazos
-│   │   │   ├── favorites.ts       # Estado global de favoritos
-│   │   │   └── battle.ts          # Estado global de partida
-│   │   └── types/
-│   │       ├── card.ts            # Tipos de la API de Scryfall
-│   │       ├── deck.ts            # Tipos de mazos
-│   │       └── player.ts          # Tipos de jugadores
-│   ├── routes/
-│   │   ├── +layout.svelte         # Layout principal
-│   │   ├── +page.svelte           # Página principal (buscador)
-│   │   ├── battle/
-│   │   │   └── +page.svelte       # Modo combate
-│   │   └── api/
-│   │       ├── decks/
-│   │       │   └── +server.ts     # API REST de mazos
-│   │       └── sessions/
-│   │           └── +server.ts     # API REST de partidas
-│   └── app.html
-├── static/
-├── tests/
-├── .env
-├── svelte.config.js
-├── tsconfig.json
-└── package.json
+│   │   └── assets/
+│   │       └── favicon.svg
+│   └── routes/
+│       ├── +layout.svelte          # Layout raíz: envuelve todas las páginas
+│       ├── +page.svelte            # Página principal: buscador + favoritos + mazos
+│       ├── layout.css              # Importación de Tailwind CSS
+│       ├── mazo/
+│       │   └── [nombre]/
+│       │       ├── +page.svelte    # Detalle de un mazo concreto
+│       │       └── +page.ts        # Función load: decodifica el parámetro de URL
+│       └── verMazo/
+│           └── +page.svelte        # Versión anterior del visor (obsoleta, sin uso)
+├── prisma/
+│   └── dev.db                      # Base de datos SQLite (preparada para backend futuro)
+├── static/                         # Recursos estáticos públicos
+├── .env                            # Variables de entorno (JWT_SECRET, DATABASE_URL)
+├── estilos.css                     # CSS de la etapa anterior (sin uso, sustituido por Tailwind)
+├── svelte.config.js                # Configuración SvelteKit (Svelte 5 runes habilitadas)
+├── vite.config.ts                  # Plugins de Vite
+├── tsconfig.json                   # TypeScript en modo estricto
+└── package.json                    # Dependencias y scripts
 ```
 
 ---
 
-## Roadmap
+## Rutas y páginas
 
-### Fase 1 — MVP (prioridad)
-- Sistema de registro e inicio de sesión (usuarios privados).
-- Perfil de usuario con mazos asociados.
-- Migración de `localStorage` a base de datos en la nube.
-- CRUD completo de mazos desde cualquier dispositivo.
-- Historial de partidas guardado por usuario.
+### `/` — Página principal
 
-### Fase 2 — Asistente de mazos con clustering (Python)
-- Script Python para limpiar y normalizar los campos jugables del JSON de Scryfall.
-- Aplicar algoritmo de clustering (K-Means u otro) sobre el conjunto de cartas.
-- Exportar el resultado (`cards_with_clusters.json`) e integrarlo en la base de datos.
-- Endpoint en SvelteKit para servir recomendaciones por cluster.
-- Componente frontend "Asistente de mazos" con:
-  - Cartas similares a la seleccionada.
-  - Análisis de desequilibrios del mazo actual.
-  - Sugerencias de cartas de clusters no representados.
+**Archivo:** `src/routes/+page.svelte`
+
+La página central de la aplicación. Divide la interfaz en cuatro zonas:
+
+- **Cabecera:** barra de búsqueda, pastillas de filtro por color de maná (blanco, azul, negro, rojo, verde), botón de carta aleatoria y accesos a batalla y logout.
+- **Panel izquierdo:** lista de cartas favoritas con contador y controles de paginación (Anterior / Siguiente).
+- **Área central:** cuadrícula de cartas con imágenes de Scryfall, indicador de carga, y botones de acción al pasar el cursor (añadir a favoritos, añadir al mazo activo).
+- **Panel derecho:** campo para crear un nuevo mazo, selector de mazo activo, y listado de las cartas que contiene con botones para añadir/quitar copias y enlace a la vista de detalle.
+
+Al hacer clic en la imagen de cualquier carta se abre un **modal de detalle** con su imagen completa, coste de maná, tipo, texto de reglas, fuerza/resistencia, lealtad, rareza y nombre del set.
+
+Toda la lógica reactiva usa **Svelte 5 Runes** (`$state`, `$derived`).
+
+### `/mazo/[nombre]` — Detalle de mazo
+
+**Archivos:** `src/routes/mazo/[nombre]/+page.svelte` y `+page.ts`
+
+Muestra el contenido completo de un mazo:
+
+- Listado de cartas agrupadas por nombre con contador de copias.
+- Botones `+` / `−` para ajustar cantidades de cada carta.
+- Buscador interno para añadir nuevas cartas al mazo usando la API de Scryfall.
+- Cabecera editable para renombrar el mazo.
+- Botón de eliminar mazo completo.
+- Modal de detalle de carta al hacer clic en una imagen.
+- Botón de volver a la página principal.
+
+El parámetro `[nombre]` de la URL está codificado con `encodeURIComponent` para soportar espacios y caracteres especiales. La función `load` en `+page.ts` lo decodifica antes de usarlo. Si el nombre no corresponde a ningún mazo existente, redirige al inicio.
+
+### `/verMazo` — Vista antigua (obsoleta)
+
+Iteración anterior del visor de mazos. Se conserva en el repositorio pero no se usa ni está enlazada desde ninguna parte.
 
 ---
 
-## Equipo
+## Integración con Scryfall API
 
-Proyecto desarrollado por el **Grupo AMS** como proyecto académico.
+Todas las llamadas son peticiones `fetch` del lado del cliente (sin proxy) a `https://api.scryfall.com/`. No requiere autenticación.
+
+| Endpoint | Uso |
+|---|---|
+| `/cards/search?q={query}` | Búsqueda por nombre |
+| `/cards/search?q=c:{color}` | Filtro por color de maná |
+| `/cards/search?q={query}&page=N` | Paginación de resultados |
+| `/cards/random` | Carta aleatoria |
+| `/cards/named?exact={nombre}` | Carga de imagen para cartas del mazo |
+
+Los colores de maná usan la notación estándar de MTG: `w` (blanco), `u` (azul), `b` (negro), `r` (rojo), `g` (verde).
+
+Las cartas de doble cara almacenan su imagen en `card_faces[0].image_uris.png` en lugar de `image_uris.png`. Se usa una función auxiliar que comprueba ambas rutas y devuelve la primera disponible.
+
+---
+
+## Persistencia de datos
+
+Toda la información del usuario se guarda en **localStorage** del navegador. No hay llamadas a base de datos activas en esta versión.
+
+| Clave localStorage | Tipo | Contenido |
+|---|---|---|
+| `mtg_favs` | `string[]` | Nombres de cartas favoritas |
+| `mtg_mazos` | `Record<string, string[]>` | Mazos del usuario: nombre del mazo → lista de nombres de cartas (con duplicados para indicar copias) |
+
+**Ejemplo:**
+```json
+{
+  "Mi Mazo Rojo": ["Lightning Bolt", "Lightning Bolt", "Goblin Guide"],
+  "Control Azul": ["Counterspell", "Island", "Island", "Island"]
+}
+```
+
+Prisma y SQLite están configurados (`prisma/dev.db`, `DATABASE_URL` en `.env`) para cuando se implemente la persistencia en servidor.
+
+---
+
+## Gestión del estado con Svelte 5 Runes
+
+La aplicación usa el sistema de reactividad de Svelte 5 en lugar de stores:
+
+```typescript
+// Estado reactivo en +page.svelte
+let colorSeleccionado = $state('');
+let textoBusqueda    = $state('');
+let numPagina        = $state(1);
+let cartas           = $state<any[]>([]);
+let favoritos        = $state<string[]>([]);
+let mazos            = $state<Record<string, string[]>>({});
+let mazoSeleccionado = $state('');
+let cartaSeleccionada = $state<any>(null);
+
+// Estado derivado en /mazo/[nombre]/+page.svelte
+// Reagrupa las cartas del mazo contando copias
+const cartasAgrupadas = $derived.by(() => {
+  const conteo: Record<string, number> = {};
+  for (const c of mazos[deckName] || []) {
+    conteo[c] = (conteo[c] || 0) + 1;
+  }
+  return Object.entries(conteo).map(([nombre, cantidad]) => ({ nombre, cantidad }));
+});
+```
+
+`$derived.by()` recalcula automáticamente cada vez que cambia el mazo, manteniendo la UI siempre sincronizada sin lógica de actualización manual.
+
+---
+
+## Diseño visual
+
+Tema oscuro con acento púrpura, implementado con variables CSS como sistema de tokens:
+
+```css
+--bg:             #0c0c10   /* Fondo principal */
+--surface:        #14141c   /* Paneles */
+--surface-2:      #1c1c28   /* Elementos secundarios */
+--text-primary:   #f0eff6
+--text-secondary: #8e8da8
+--accent:         #7c5cf6   /* Morado — botones y énfasis */
+--gold:           #c9a840   /* Rareza / detalles dorados */
+--danger:         #e0434a   /* Eliminar / error */
+--green:          #3db37a   /* Añadir / éxito */
+```
+
+Los estilos están encapsulados en cada componente `.svelte` con bloques `<style>`. Tailwind CSS v4 se importa globalmente desde `layout.css` para utilidades de maquetación.
+
+---
+
+## Instalación y uso
+
+### Requisitos
+
+- Node.js >= 18
+
+### Pasos
+
+```bash
+# 1. Clonar el repositorio y situarse en la rama backend
+git clone <url-del-repo>
+cd ams-mtg
+git checkout backend
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Iniciar el servidor de desarrollo
+npm run dev
+```
+
+La aplicación queda disponible en `http://localhost:5173`.
+
+### Scripts disponibles
+
+```bash
+npm run dev       # Servidor de desarrollo con hot-reload
+npm run build     # Compilar para producción
+npm run preview   # Vista previa del build de producción
+npm run check     # Verificación de tipos (TypeScript + Svelte)
+npm run lint      # Comprobar formato y reglas ESLint
+npm run format    # Aplicar formato automático (Prettier)
+```
+
+### Variables de entorno
+
+El archivo `.env` incluido contiene:
+
+```
+JWT_SECRET="cambia-esto-por-un-secreto-largo-y-aleatorio"
+DATABASE_URL="file:./dev.db"
+```
+
+Estas variables están preparadas para cuando se implemente la autenticación y el acceso a base de datos. No afectan al funcionamiento actual de la aplicación.
+
+---
+
+## Funcionalidades pendientes
+
+Las siguientes características están planificadas pero no están implementadas en esta rama:
+
+- **Modo batalla** (`/partida`): Contador de vida, daño de comandante, contadores de veneno y herramientas de aleatoriedad para partidas multijugador. La ruta no existe aún.
+- **Autenticación**: El botón de logout referencia `/api/auth/logout`, pero no hay rutas de API implementadas. Se planea usar JWT con `JWT_SECRET`.
+- **Persistencia en servidor**: Migrar los datos de localStorage a SQLite vía Prisma.
+- **Módulo de recomendación con clustering**: Script Python (K-Means) que analiza el catálogo de Scryfall, agrupa cartas por características jugables y expone recomendaciones desde un endpoint de SvelteKit.
+
+---
+
+## Autores
+
+Proyecto desarrollado para la asignatura de Aplicaciones Multimedia y Servicios (AMS).
 
 | Nombre | Contacto |
 |---|---|
 | Equipo AMS | amsgrupoproyecto26@gmail.com |
-
----
-
-> *AMS MTG no está afiliado ni es patrocinado por Wizards of the Coast. Magic: The Gathering es una marca registrada de Wizards of the Coast LLC.*
