@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const where: Record<string, unknown> = {};
 
 	if (q) {
-		where.name = { contains: q, mode: 'insensitive' };
+		where.name = { contains: q };
 	}
 
 	if (colorsParam) {
