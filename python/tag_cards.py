@@ -58,7 +58,7 @@ def get_tags(card) -> list[str]:
         '-x/-x', 'toughness becomes 0',
     ]
     if any(p in oracle for p in removal_phrases):
-        tags.append('remocion')
+        tags.append('destruccion')
 
     # --- Robo de cartas ---
     draw_phrases = ['draw a card', 'draw two cards', 'draw three cards', 'draw x cards', 'draw cards']

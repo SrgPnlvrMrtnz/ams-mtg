@@ -13,7 +13,7 @@ const TAG_LABELS: Record<string, string> = {
 	encantamiento: 'Encantamientos',
 	tierra: 'Tierras',
 	planeswalker: 'Planeswalkers',
-	remocion: 'Remoción',
+	destruccion: 'Destrucción',
 	'robo-cartas': 'Robo de cartas',
 	ramp: 'Aceleración de maná',
 	contrahechizo: 'Contrahechizos',
@@ -65,7 +65,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	const alerts: string[] = [];
 
-	if (!tagCounts['remocion']) alerts.push('Tu mazo no tiene remoción.');
+	if (!tagCounts['destruccion']) alerts.push('Tu mazo no tiene destrucción.');
 	if (!tagCounts['robo-cartas']) alerts.push('Tu mazo no tiene robo de cartas.');
 	if (!tagCounts['ramp']) alerts.push('Tu mazo no tiene aceleración de maná.');
 	if (!tagCounts['bajo-coste']) alerts.push('Tu mazo carece de jugadas tempranas (sin cartas de bajo coste).');
