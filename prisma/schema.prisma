@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  decks     Deck[]
+  sessions  Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Deck {
+  id        String   @id @default(cuid())
+  name      String
+  format    String?
+  cards     String   @default("[]")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Card {
+  id             String  @id
+  name           String
+  mana_cost      String?
+  cmc            Float
+  type_line      String
+  oracle_text    String?
+  power          String?
+  toughness      String?
+  loyalty        String?
+  colors         String
+  color_identity String
+  keywords       String
+  set_code       String?
+  rarity         String?
+  tags           String  @default("[]")
+}
