@@ -258,7 +258,7 @@
 		if (q.length < 2) { modalComandanteSugerencias = []; return; }
 		_comandanteTimer = setTimeout(async () => {
 			try {
-				const res = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(q)}+is%3Acommander`);
+				const res = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(q)}`);
 				const data = await res.json();
 				modalComandanteSugerencias = data.data?.slice(0, 6) ?? [];
 			} catch { modalComandanteSugerencias = []; }
