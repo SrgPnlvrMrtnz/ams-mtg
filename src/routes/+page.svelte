@@ -28,11 +28,6 @@
 	let imagenesCartas: Record<string, string> = $state({});
 	let hayMas = $state(false);
 
-	let cartaSeleccionada: ApiCard | null = $state(null);
-	let cartasSimilares: ApiCard[] = $state([]);
-	let imagenesSimilares: Record<string, string> = $state({});
-	let cargandoSimilares = $state(false);
-
 	let analisisVisible = $state(false);
 	let analisisData: { distribution: { tag: string; label: string; count: number; percentage: number }[]; alerts: string[]; total: number } | null = $state(null);
 	let cargandoAnalisis = $state(false);
@@ -96,8 +91,6 @@
 	async function rellenarPaginaCartas(p: number) {
 		cartas = [];
 		imagenesCartas = {};
-		cartaSeleccionada = null;
-		cartasSimilares = [];
 		cargando = true;
 		statusMsg = fraseMagicaAleatoria();
 		try {
@@ -120,8 +113,6 @@
 	async function cartaAleatoria() {
 		cartas = [];
 		imagenesCartas = {};
-		cartaSeleccionada = null;
-		cartasSimilares = [];
 		cargando = true;
 		statusMsg = 'Buscando una carta aleatoria...';
 		try {
@@ -193,30 +184,6 @@
 		colorSeleccionado = '';
 		puntero = 0;
 		rellenarPaginaCartas(0);
-	}
-
-	async function seleccionarCarta(carta: ApiCard) {
-		if (cartaSeleccionada?.id === carta.id) {
-			cartaSeleccionada = null;
-			cartasSimilares = [];
-			return;
-		}
-		cartaSeleccionada = carta;
-		cartasSimilares = [];
-		imagenesSimilares = {};
-		cargandoSimilares = true;
-		try {
-			const res = await fetch(`/api/cards/${carta.id}/similar`);
-			if (res.ok) {
-				const data = await res.json();
-				cartasSimilares = data.cards ?? [];
-				if (cartasSimilares.length > 0) {
-					imagenesSimilares = await fetchImages(cartasSimilares.map((c) => c.name));
-				}
-			}
-		} finally {
-			cargandoSimilares = false;
-		}
 	}
 
 	function agregarFavorito(nombre: string) {
@@ -419,14 +386,7 @@
 		<div class="card-grid">
 			{#each cartas as carta}
 				{@const imgUrl = imagenesCartas[carta.name]}
-				<article
-					class="card-item"
-					class:selected={cartaSeleccionada?.id === carta.id}
-					onclick={() => seleccionarCarta(carta)}
-					aria-label={carta.name}
-					tabindex="0"
-					onkeydown={(e) => e.key === 'Enter' && seleccionarCarta(carta)}
-				>
+				<article class="card-item">
 					{#if imgUrl}
 						<img src={imgUrl} alt={carta.name} loading="lazy" />
 					{:else}
@@ -459,43 +419,6 @@
 			{/each}
 		</div>
 
-		<!-- Similar cards -->
-		{#if cartaSeleccionada}
-			<div class="similar-section">
-				<div class="similar-header">
-					<h3>Cartas similares a <em>{cartaSeleccionada.name}</em></h3>
-					<button class="btn btn-ghost" onclick={() => { cartaSeleccionada = null; cartasSimilares = []; }}>
-						Cerrar
-					</button>
-				</div>
-				{#if cargandoSimilares}
-					<p class="status-text">Buscando cartas similares...</p>
-				{:else if cartasSimilares.length === 0}
-					<p class="status-text">No se encontraron cartas similares.</p>
-				{:else}
-					<div class="similar-grid">
-						{#each cartasSimilares as carta}
-							{@const imgUrl = imagenesSimilares[carta.name]}
-							<article class="card-item">
-								{#if imgUrl}
-									<img src={imgUrl} alt={carta.name} loading="lazy" />
-								{:else}
-									<div class="card-placeholder"><span>{carta.name}</span></div>
-								{/if}
-								<div class="card-actions">
-									<button class="card-action-btn action-deck" onclick={() => agregarAlMazo(carta.name)} title="Añadir al mazo">
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-											<path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-										</svg>
-										Al mazo
-									</button>
-								</div>
-							</article>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
 	</section>
 
 	<!-- Sidebar: Mazos -->
@@ -1230,12 +1153,6 @@
 		color: #fff;
 	}
 
-	/* ── Selected card ─────────────────────────────────────────────── */
-	.card-item.selected {
-		border-color: var(--accent);
-		box-shadow: 0 0 0 2px var(--accent-dim);
-	}
-
 	/* ── Card placeholder ──────────────────────────────────────────── */
 	.card-placeholder {
 		width: 100%;
@@ -1248,40 +1165,6 @@
 		text-align: center;
 		font-size: 11px;
 		color: var(--text-muted);
-	}
-
-	/* ── Similar cards section ─────────────────────────────────────── */
-	.similar-section {
-		margin-top: 24px;
-		padding: 16px;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-	}
-
-	.similar-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 14px;
-	}
-
-	.similar-header h3 {
-		margin: 0;
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.similar-header h3 em {
-		color: var(--accent-light);
-		font-style: normal;
-	}
-
-	.similar-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-		gap: 10px;
 	}
 
 	/* ── Deck analysis ─────────────────────────────────────────────── */
