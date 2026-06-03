@@ -1622,14 +1622,11 @@
 	}
 
 	.autocomplete-wrap {
-		position: relative;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.autocomplete-list {
-		position: absolute;
-		top: 100%;
-		left: 0;
-		right: 0;
 		background: var(--surface-2);
 		border: 1px solid var(--border);
 		border-top: none;
@@ -1637,9 +1634,6 @@
 		list-style: none;
 		margin: 0;
 		padding: 4px 0;
-		z-index: 10;
-		max-height: 160px;
-		overflow-y: auto;
 	}
 
 	.autocomplete-list li button {
