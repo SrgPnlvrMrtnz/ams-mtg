@@ -28,8 +28,11 @@ model Deck {
   id        String   @id @default(cuid())
   name      String
   format    String?
-  cards     String   @default("[]")
-  userId    String
+  cards         String   @default("[]")
+  description   String?
+  colorIdentity String   @default("[]")
+  commander     String?
+  userId        String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -32,10 +32,29 @@
 	let analisisData: { distribution: { tag: string; label: string; count: number; percentage: number }[]; alerts: string[]; total: number } | null = $state(null);
 	let cargandoAnalisis = $state(false);
 
+	type Deck = {
+		id: string;
+		name: string;
+		format: string | null;
+		description: string | null;
+		colorIdentity: string;
+		commander: string | null;
+		cards: string;
+	};
+
 	let favoritos: string[] = $state([]);
-	let mazos: Record<string, string[]> = $state({});
-	let mazoSeleccionado = $state('');
-	let nuevoMazoNombre = $state('');
+	let mazos: Deck[] = $state([]);
+	let mazoSeleccionadoId = $state('');
+
+	// Modal de creación
+	let modalAbierto = $state(false);
+	let modalNombre = $state('');
+	let modalFormato = $state('');
+	let modalDescripcion = $state('');
+	let modalColores: string[] = $state([]);
+	let modalComandante = $state('');
+	let modalComandanteSugerencias: string[] = $state([]);
+	let modalCargando = $state(false);
 
 	const frasesMagicas = [
 		'Consultando los pergaminos del oráculo...',
@@ -51,11 +70,19 @@
 		return frasesMagicas[Math.floor(Math.random() * frasesMagicas.length)];
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		favoritos = JSON.parse(localStorage.getItem('mtg_favs') || '[]');
-		mazos = JSON.parse(localStorage.getItem('mtg_mazos') || '{}');
+		await cargarMazos();
 		rellenarPaginaCartas(0);
 	});
+
+	async function cargarMazos() {
+		const res = await fetch('/api/decks');
+		if (res.ok) mazos = await res.json();
+	}
+
+	const mazoSeleccionado = $derived(mazos.find((m) => m.id === mazoSeleccionadoId) ?? null);
+	const cartasDelMazo = $derived<string[]>(mazoSeleccionado ? JSON.parse(mazoSeleccionado.cards) : []);
 
 	async function fetchImages(names: string[]): Promise<Record<string, string>> {
 		if (names.length === 0) return {};
@@ -198,33 +225,106 @@
 		localStorage.setItem('mtg_favs', JSON.stringify(favoritos));
 	}
 
-	function crearMazo() {
-		const nombre = nuevoMazoNombre.trim();
-		if (nombre && !mazos[nombre]) {
-			mazos = { ...mazos, [nombre]: [] };
-			nuevoMazoNombre = '';
-			localStorage.setItem('mtg_mazos', JSON.stringify(mazos));
+	function abrirModal() {
+		modalNombre = '';
+		modalFormato = '';
+		modalDescripcion = '';
+		modalColores = [];
+		modalComandante = '';
+		modalComandanteSugerencias = [];
+		modalAbierto = true;
+	}
+
+	function toggleColorModal(color: string) {
+		modalColores = modalColores.includes(color)
+			? modalColores.filter((c) => c !== color)
+			: [...modalColores, color];
+	}
+
+	let _comandanteTimer: ReturnType<typeof setTimeout>;
+	async function buscarComandante(q: string) {
+		modalComandante = q;
+		clearTimeout(_comandanteTimer);
+		if (q.length < 2) { modalComandanteSugerencias = []; return; }
+		_comandanteTimer = setTimeout(async () => {
+			try {
+				const res = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(q)}+is%3Acommander`);
+				const data = await res.json();
+				modalComandanteSugerencias = data.data?.slice(0, 5) ?? [];
+			} catch { modalComandanteSugerencias = []; }
+		}, 300);
+	}
+
+	async function confirmarCrearMazo() {
+		if (!modalNombre.trim()) return;
+		modalCargando = true;
+		try {
+			const res = await fetch('/api/decks', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: modalNombre.trim(),
+					format: modalFormato || null,
+					description: modalDescripcion || null,
+					colorIdentity: modalColores,
+					commander: modalComandante || null
+				})
+			});
+			if (res.ok) {
+				const nuevo = await res.json();
+				mazos = [nuevo, ...mazos];
+				mazoSeleccionadoId = nuevo.id;
+				modalAbierto = false;
+			}
+		} finally {
+			modalCargando = false;
 		}
 	}
 
-	function agregarAlMazo(nombreCarta: string) {
-		if (!mazoSeleccionado) {
+	async function agregarAlMazo(nombreCarta: string) {
+		if (!mazoSeleccionadoId || !mazoSeleccionado) {
 			alert('Selecciona un mazo primero.');
 			return;
 		}
-		mazos[mazoSeleccionado] = [...(mazos[mazoSeleccionado] || []), nombreCarta];
-		mazos = { ...mazos };
-		localStorage.setItem('mtg_mazos', JSON.stringify(mazos));
+		const nuevasCartas = [...cartasDelMazo, nombreCarta];
+		const res = await fetch(`/api/decks/${mazoSeleccionadoId}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ cards: nuevasCartas })
+		});
+		if (res.ok) {
+			const updated = await res.json();
+			mazos = mazos.map((m) => (m.id === mazoSeleccionadoId ? updated : m));
+		}
 	}
 
-	function quitarDelMazo(i: number) {
-		mazos[mazoSeleccionado] = mazos[mazoSeleccionado].filter((_, idx) => idx !== i);
-		mazos = { ...mazos };
-		localStorage.setItem('mtg_mazos', JSON.stringify(mazos));
+	async function quitarDelMazo(i: number) {
+		if (!mazoSeleccionadoId || !mazoSeleccionado) return;
+		const nuevasCartas = cartasDelMazo.filter((_, idx) => idx !== i);
+		const res = await fetch(`/api/decks/${mazoSeleccionadoId}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ cards: nuevasCartas })
+		});
+		if (res.ok) {
+			const updated = await res.json();
+			mazos = mazos.map((m) => (m.id === mazoSeleccionadoId ? updated : m));
+		}
+	}
+
+	async function eliminarMazo() {
+		if (!mazoSeleccionadoId) return;
+		if (!confirm('¿Eliminar este mazo? Esta acción no se puede deshacer.')) return;
+		const res = await fetch(`/api/decks/${mazoSeleccionadoId}`, { method: 'DELETE' });
+		if (res.ok) {
+			mazos = mazos.filter((m) => m.id !== mazoSeleccionadoId);
+			mazoSeleccionadoId = '';
+			analisisVisible = false;
+		}
 	}
 
 	async function analizarMazo() {
-		if (!mazoSeleccionado || !mazos[mazoSeleccionado]?.length) return;
+		if (!mazoSeleccionadoId || cartasDelMazo.length === 0) return;
 		analisisVisible = true;
 		analisisData = null;
 		cargandoAnalisis = true;
@@ -232,13 +332,15 @@
 			const res = await fetch('/api/decks/analyze', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ cards: mazos[mazoSeleccionado] })
+				body: JSON.stringify({ cards: cartasDelMazo })
 			});
 			if (res.ok) analisisData = await res.json();
 		} finally {
 			cargandoAnalisis = false;
 		}
 	}
+
+	const FORMATOS = ['Standard', 'Pioneer', 'Modern', 'Legacy', 'Vintage', 'Commander', 'Pauper', 'Casual'];
 
 	const manaColors = [
 		{ code: 'W', label: 'Blanco', symbol: 'W', cls: 'mana-w' },
@@ -430,47 +532,45 @@
 				<path d="M5 3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5ZM5 11a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H5ZM11 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V5ZM14 11a1 1 0 0 1 1 1v1h1a1 1 0 1 1 0 2h-1v1a1 1 0 1 1-2 0v-1h-1a1 1 0 1 1 0-2h1v-1a1 1 0 0 1 1-1Z" />
 			</svg>
 			<h2>Mis Mazos</h2>
-			{#if Object.keys(mazos).length > 0}
-				<span class="badge">{Object.keys(mazos).length}</span>
+			{#if mazos.length > 0}
+				<span class="badge">{mazos.length}</span>
 			{/if}
 		</div>
 
-		<div class="deck-new">
-			<input
-				type="text"
-				bind:value={nuevoMazoNombre}
-				placeholder="Nombre del mazo..."
-				onkeydown={(e) => e.key === 'Enter' && crearMazo()}
-			/>
-			<button class="btn btn-primary" onclick={crearMazo}>Crear</button>
-		</div>
+		<button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px;" onclick={abrirModal}>
+			+ Nuevo mazo
+		</button>
 
-		{#if Object.keys(mazos).length > 0}
+		{#if mazos.length > 0}
 			<div class="deck-selector">
 				<label class="field-label" for="deck-select">Mazo activo</label>
-				<select id="deck-select" bind:value={mazoSeleccionado}>
+				<select id="deck-select" bind:value={mazoSeleccionadoId}>
 					<option value="">Seleccionar...</option>
-					{#each Object.keys(mazos) as nombre}
-						<option value={nombre}>{nombre}</option>
+					{#each mazos as m}
+						<option value={m.id}>{m.name}{m.format ? ` · ${m.format}` : ''}</option>
 					{/each}
 				</select>
 			</div>
 		{/if}
 
-		{#if mazoSeleccionado && mazos[mazoSeleccionado]}
+		{#if mazoSeleccionado}
+			{#if mazoSeleccionado.commander}
+				<p class="deck-meta">⚔ {mazoSeleccionado.commander}</p>
+			{/if}
+			{#if mazoSeleccionado.description}
+				<p class="deck-meta deck-desc">{mazoSeleccionado.description}</p>
+			{/if}
 			<div class="deck-count">
-				{mazos[mazoSeleccionado].length} {mazos[mazoSeleccionado].length === 1 ? 'carta' : 'cartas'}
+				{cartasDelMazo.length} {cartasDelMazo.length === 1 ? 'carta' : 'cartas'}
 			</div>
-			{#if mazos[mazoSeleccionado].length === 0}
+			{#if cartasDelMazo.length === 0}
 				<p class="empty-hint">Este mazo está vacío.</p>
 			{:else}
 				<div class="deck-count-row">
-					<a href="/mazo/{encodeURIComponent(mazoSeleccionado)}" class="btn btn-ghost ver-mazo-btn">
-						Ver mazo
-					</a>
+					<a href="/mazo/{mazoSeleccionadoId}" class="btn btn-ghost ver-mazo-btn">Ver mazo</a>
 				</div>
 				<ul class="item-list">
-					{#each mazos[mazoSeleccionado] as carta, i}
+					{#each cartasDelMazo as carta, i}
 						<li class="item-row">
 							<span class="item-name">{carta}</span>
 							<button class="btn-icon btn-remove" onclick={() => quitarDelMazo(i)} title="Quitar">
@@ -481,10 +581,12 @@
 						</li>
 					{/each}
 				</ul>
-				<button class="btn btn-primary analyze-btn" onclick={analizarMazo}>
-					Analizar mazo
-				</button>
+				<button class="btn btn-primary analyze-btn" onclick={analizarMazo}>Analizar mazo</button>
 			{/if}
+
+			<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;color:var(--danger);border-color:rgba(224,67,74,0.3);" onclick={eliminarMazo}>
+				Eliminar mazo
+			</button>
 
 			{#if analisisVisible}
 				<div class="analysis-panel">
@@ -525,6 +627,91 @@
 		{/if}
 	</aside>
 </main>
+
+<!-- Modal: Nuevo Mazo -->
+{#if modalAbierto}
+	<div class="modal-overlay" role="dialog" aria-modal="true">
+		<div class="modal">
+			<div class="modal-header">
+				<h2>Nuevo Mazo</h2>
+				<button class="btn-icon btn-remove" title="Cerrar" onclick={() => (modalAbierto = false)}>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+						<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+					</svg>
+				</button>
+			</div>
+
+			<div class="modal-body">
+				<div class="form-field">
+					<label class="field-label" for="modal-nombre">Nombre *</label>
+					<input id="modal-nombre" type="text" bind:value={modalNombre} placeholder="Mi mazo..." />
+				</div>
+
+				<div class="form-field">
+					<label class="field-label" for="modal-formato">Formato</label>
+					<select id="modal-formato" bind:value={modalFormato}>
+						<option value="">Sin especificar</option>
+						{#each FORMATOS as f}
+							<option value={f}>{f}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="form-field">
+					<label class="field-label" for="modal-desc">Descripción</label>
+					<textarea id="modal-desc" bind:value={modalDescripcion} placeholder="Estrategia, notas..." rows="2"></textarea>
+				</div>
+
+				<div class="form-field">
+					<span class="field-label">Colores de identidad</span>
+					<div class="color-picker">
+						{#each manaColors as m}
+							<button
+								class="mana-pip {m.cls} color-toggle"
+								class:active={modalColores.includes(m.code)}
+								onclick={() => toggleColorModal(m.code)}
+								title={m.label}
+							>
+								<span class="pip-symbol">{m.symbol}</span>
+							</button>
+						{/each}
+					</div>
+				</div>
+
+				<div class="form-field">
+					<label class="field-label" for="modal-comandante">Comandante</label>
+					<div class="autocomplete-wrap">
+						<input
+							id="modal-comandante"
+							type="text"
+							value={modalComandante}
+							oninput={(e) => buscarComandante((e.target as HTMLInputElement).value)}
+							placeholder="Buscar comandante..."
+						/>
+						{#if modalComandanteSugerencias.length > 0}
+							<ul class="autocomplete-list">
+								{#each modalComandanteSugerencias as sug}
+									<li>
+										<button onclick={() => { modalComandante = sug; modalComandanteSugerencias = []; }}>
+											{sug}
+										</button>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				</div>
+			</div>
+
+			<div class="modal-footer">
+				<button class="btn btn-ghost" onclick={() => (modalAbierto = false)}>Cancelar</button>
+				<button class="btn btn-primary" onclick={confirmarCrearMazo} disabled={!modalNombre.trim() || modalCargando}>
+					{modalCargando ? 'Creando...' : 'Crear Mazo →'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	/* ── Design tokens ─────────────────────────────────────────────── */
@@ -1275,5 +1462,147 @@
 		width: 100%;
 		justify-content: center;
 		font-size: 11px;
+	}
+
+	.deck-meta {
+		font-size: 11px;
+		color: var(--text-secondary);
+		margin: 0 0 4px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.deck-desc {
+		font-style: italic;
+		color: var(--text-muted);
+	}
+
+	/* ── Modal ──────────────────────────────────────────────────────── */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 200;
+		padding: 16px;
+	}
+
+	.modal {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
+		width: 100%;
+		max-width: 440px;
+		box-shadow: var(--shadow-lg);
+		display: flex;
+		flex-direction: column;
+		max-height: 90vh;
+		overflow: hidden;
+	}
+
+	.modal-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 16px 20px;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.modal-header h2 {
+		margin: 0;
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--text-primary);
+	}
+
+	.modal-body {
+		padding: 20px;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.modal-footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 14px 20px;
+		border-top: 1px solid var(--border);
+	}
+
+	.form-field {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	:global(textarea) {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		color: var(--text-primary);
+		padding: 8px 12px;
+		border-radius: var(--radius-sm);
+		font-family: var(--font);
+		font-size: 13px;
+		outline: none;
+		resize: vertical;
+		transition: border-color 0.15s;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	:global(textarea:focus) {
+		border-color: var(--border-focus);
+	}
+
+	.color-picker {
+		display: flex;
+		gap: 6px;
+	}
+
+	.color-toggle {
+		padding: 4px 6px;
+	}
+
+	.autocomplete-wrap {
+		position: relative;
+	}
+
+	.autocomplete-list {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		background: var(--surface-2);
+		border: 1px solid var(--border);
+		border-top: none;
+		border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+		list-style: none;
+		margin: 0;
+		padding: 4px 0;
+		z-index: 10;
+		max-height: 160px;
+		overflow-y: auto;
+	}
+
+	.autocomplete-list li button {
+		width: 100%;
+		text-align: left;
+		background: none;
+		border: none;
+		padding: 7px 12px;
+		font-size: 12px;
+		color: var(--text-primary);
+		cursor: pointer;
+		font-family: var(--font);
+	}
+
+	.autocomplete-list li button:hover {
+		background: var(--accent-dim);
+		color: var(--accent-light);
 	}
 </style>
