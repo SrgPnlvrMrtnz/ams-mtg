@@ -383,6 +383,7 @@
 			</div>
 		{/if}
 
+		{#if !cargando}
 		<div class="card-grid">
 			{#each cartas as carta}
 				{@const imgUrl = imagenesCartas[carta.name]}
@@ -418,6 +419,7 @@
 				</article>
 			{/each}
 		</div>
+		{/if}
 
 	</section>
 
