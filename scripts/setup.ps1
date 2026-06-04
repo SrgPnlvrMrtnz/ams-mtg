@@ -20,7 +20,7 @@ if (-not (Test-Path ".env")) {
 
 Write-Host ""
 Write-Host "==> Running Prisma migrations..."
-npx prisma migrate dev --name setup
+npx prisma migrate deploy
 if (-not $?) { exit 1 }
 Write-Host "    Database ready." -ForegroundColor Green
 
