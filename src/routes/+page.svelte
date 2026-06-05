@@ -28,6 +28,21 @@
 	let imagenesCartas: Record<string, string> = $state({});
 	let hayMas = $state(false);
 
+	let cartaSeleccionada = $state<any>(null);
+
+	function verDetalle(carta: any) { cartaSeleccionada = carta; }
+	async function verDetalleCompleto(carta: ApiCard) {
+		// Fetch full card data from Scryfall for oracle text, etc.
+		try {
+			const res = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(carta.name)}`);
+			if (res.ok) cartaSeleccionada = await res.json();
+			else cartaSeleccionada = carta;
+		} catch {
+			cartaSeleccionada = carta;
+		}
+	}
+	function cerrarDetalle() { cartaSeleccionada = null; }
+
 	let analisisVisible = $state(false);
 	let analisisData: { distribution: { tag: string; label: string; count: number; percentage: number }[]; alerts: string[]; total: number } | null = $state(null);
 	let cargandoAnalisis = $state(false);
@@ -482,26 +497,6 @@
 
 		<div class="panel-divider"></div>
 
-		<div class="panel-header">
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="panel-icon" aria-hidden="true">
-				<path fill-rule="evenodd" d="M2 10a8 8 0 1 1 16 0 8 8 0 0 1-16 0Zm6.39-2.908a.75.75 0 0 1 .766.027l3.5 2.25a.75.75 0 0 1 0 1.262l-3.5 2.25A.75.75 0 0 1 8 12.25v-4.5a.75.75 0 0 1 .39-.658Z" clip-rule="evenodd" />
-			</svg>
-			<h2>Página {numPagina}</h2>
-		</div>
-		<div class="pager">
-			<button class="btn btn-ghost pager-btn" onclick={anterior} disabled={puntero === 0}>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
-				</svg>
-				Anterior
-			</button>
-			<button class="btn btn-ghost pager-btn" onclick={siguiente}>
-				Siguiente
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
-				</svg>
-			</button>
-		</div>
 	</aside>
 
 	<!-- Card Grid -->
@@ -521,7 +516,7 @@
 		<div class="card-grid">
 			{#each cartas as carta}
 				{@const imgUrl = imagenesCartas[carta.name]}
-				<article class="card-item">
+				<article class="card-item" onclick={() => verDetalleCompleto(carta)} style="cursor:pointer;" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && verDetalleCompleto(carta)}>
 					{#if imgUrl}
 						<img src={imgUrl} alt={carta.name} loading="lazy" />
 					{:else}
@@ -554,6 +549,22 @@
 			{/each}
 		</div>
 		{/if}
+
+		<div class="pager">
+			<button class="btn btn-ghost pager-btn" onclick={anterior} disabled={puntero === 0}>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+					<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+				</svg>
+				Anterior
+			</button>
+			<span class="pager-num">Página {numPagina}</span>
+			<button class="btn btn-ghost pager-btn" onclick={siguiente}>
+				Siguiente
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+					<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+				</svg>
+			</button>
+		</div>
 
 	</section>
 
@@ -662,6 +673,67 @@
 		{/if}
 	</aside>
 </main>
+
+<!-- Detail overlay -->
+{#if cartaSeleccionada}
+	<div class="detalle-overlay" role="dialog" aria-modal="true" onclick={cerrarDetalle}>
+		<div class="detalle-panel" onclick={(e) => e.stopPropagation()}>
+			<button class="detalle-cerrar" onclick={cerrarDetalle} title="Cerrar">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+					<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+				</svg>
+			</button>
+			<div class="detalle-body">
+				{#if cartaSeleccionada.image_uris?.png || cartaSeleccionada.card_faces?.[0]?.image_uris?.png}
+					<img
+						class="detalle-img"
+						src={cartaSeleccionada.image_uris?.png ?? cartaSeleccionada.card_faces?.[0]?.image_uris?.png}
+						alt={cartaSeleccionada.name}
+					/>
+				{/if}
+				<div class="detalle-info">
+					<h2 class="detalle-nombre">{cartaSeleccionada.name}</h2>
+					{#if cartaSeleccionada.mana_cost}
+						<div class="detalle-fila">
+							<span class="detalle-label">Coste de maná</span>
+							<span class="detalle-valor mana">{cartaSeleccionada.mana_cost}</span>
+						</div>
+					{/if}
+					{#if cartaSeleccionada.type_line}
+						<div class="detalle-fila">
+							<span class="detalle-label">Tipo</span>
+							<span class="detalle-valor">{cartaSeleccionada.type_line}</span>
+						</div>
+					{/if}
+					{#if cartaSeleccionada.oracle_text}
+						<div class="detalle-fila">
+							<span class="detalle-label">Texto</span>
+							<span class="detalle-valor oracle">{cartaSeleccionada.oracle_text}</span>
+						</div>
+					{/if}
+					{#if cartaSeleccionada.power != null && cartaSeleccionada.toughness != null}
+						<div class="detalle-fila">
+							<span class="detalle-label">Fuerza / Resistencia</span>
+							<span class="detalle-valor">{cartaSeleccionada.power} / {cartaSeleccionada.toughness}</span>
+						</div>
+					{/if}
+					{#if cartaSeleccionada.rarity}
+						<div class="detalle-fila">
+							<span class="detalle-label">Rareza</span>
+							<span class="detalle-valor rarity-{cartaSeleccionada.rarity}">{cartaSeleccionada.rarity}</span>
+						</div>
+					{/if}
+					{#if cartaSeleccionada.set_name}
+						<div class="detalle-fila">
+							<span class="detalle-label">Edición</span>
+							<span class="detalle-valor">{cartaSeleccionada.set_name}</span>
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <!-- Modal: Nuevo Mazo -->
 {#if modalAbierto}
@@ -1088,19 +1160,16 @@
 		width: 240px;
 		flex-shrink: 0;
 		background: var(--surface);
-		border-right: 1px solid var(--border);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
 		padding: 16px;
 		position: sticky;
 		top: 97px;
-		max-height: calc(100vh - 97px);
+		max-height: calc(100vh - 97px - 16px);
 		overflow-y: auto;
 		scrollbar-width: thin;
 		scrollbar-color: var(--border) transparent;
-	}
-
-	.panel:last-child {
-		border-right: none;
-		border-left: 1px solid var(--border);
+		margin-top: 15px;
 	}
 
 	.panel-header {
@@ -1213,15 +1282,23 @@
 	}
 
 	/* ── Pagination ────────────────────────────────────────────────── */
+	.pager-num {
+		font-size: 13px;
+		color: var(--text-secondary);
+		font-weight: 500;
+	}
+ 
 	.pager {
 		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		margin-top: 8px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		margin-top: 32px;
+		padding-bottom: 24px;
 	}
 
 	.pager-btn {
-		width: 100%;
 		justify-content: center;
 		font-size: 12px;
 	}
@@ -1705,7 +1782,69 @@
 		align-items: center;
 	}
 
-	.commander-tag button:hover {
-		color: var(--danger);
+	/* ── Detail overlay ────────────────────────────────────────────── */
+	.detalle-overlay {
+		position: fixed; inset: 0;
+		background: rgba(0,0,0,0.78);
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+		display: flex; align-items: center; justify-content: center;
+		z-index: 300; padding: 20px;
 	}
+	.detalle-panel {
+		background: linear-gradient(160deg, #1a1926, var(--surface));
+		border: 1px solid rgba(124,92,246,0.25);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-lg), 0 0 40px rgba(124,92,246,0.12);
+		width: 100%; max-width: 700px;
+		max-height: 90vh; overflow-y: auto;
+		position: relative;
+		scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+	}
+	.detalle-cerrar {
+		position: absolute; top: 14px; right: 14px;
+		width: 30px; height: 30px;
+		border-radius: 50%;
+		border: 1px solid var(--border);
+		background: var(--surface-2); color: var(--text-secondary);
+		cursor: pointer;
+		display: flex; align-items: center; justify-content: center;
+		transition: background 0.15s, color 0.15s, border-color 0.15s;
+		z-index: 1;
+	}
+	.detalle-cerrar:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+	.detalle-cerrar svg { width: 14px; height: 14px; }
+	.detalle-body { display: flex; gap: 24px; padding: 24px; }
+	.detalle-img {
+		width: 225px; flex-shrink: 0;
+		border-radius: var(--radius);
+		align-self: flex-start;
+		box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+	}
+	.detalle-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding-top: 4px; }
+	.detalle-nombre {
+		margin: 0 0 4px;
+		font-size: 20px; font-weight: 700;
+		color: var(--text-primary);
+		line-height: 1.25; letter-spacing: -0.01em;
+	}
+	.detalle-fila {
+		display: flex; flex-direction: column; gap: 3px;
+		padding: 10px 12px;
+		background: var(--surface-2);
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--border);
+	}
+	.detalle-label {
+		font-size: 10px; font-weight: 700;
+		text-transform: uppercase; letter-spacing: 0.1em;
+		color: var(--text-muted);
+	}
+	.detalle-valor { font-size: 13px; color: var(--text-primary); line-height: 1.55; }
+	.detalle-valor.mana { color: var(--gold); font-weight: 700; letter-spacing: 0.03em; }
+	.detalle-valor.oracle { color: var(--text-secondary); white-space: pre-wrap; }
+	.rarity-common { color: var(--text-secondary); }
+	.rarity-uncommon { color: #a8c4d4; }
+	.rarity-rare { color: var(--gold); font-weight: 600; }
+	.rarity-mythic { color: #e87c3e; font-weight: 600; }
 </style>
