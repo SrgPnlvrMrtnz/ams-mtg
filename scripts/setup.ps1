@@ -26,13 +26,13 @@ Write-Host "    Database ready." -ForegroundColor Green
 
 Write-Host ""
 Write-Host "==> Importing card catalog from Scryfall (~165 MB, ~34k cards)..."
-node scripts/import-cards.js
+node --env-file=.env scripts/import-cards.js
 if (-not $?) { exit 1 }
 Write-Host "    Cards imported." -ForegroundColor Green
 
 Write-Host ""
 Write-Host "==> Tagging cards with AI rules (python/tag_cards.py)..."
-python python/tag_cards.py
+python python/tag_cards.py --db prisma/dev.db
 if (-not $?) { exit 1 }
 Write-Host "    Tags applied." -ForegroundColor Green
 
