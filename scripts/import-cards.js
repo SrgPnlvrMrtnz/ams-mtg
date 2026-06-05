@@ -49,6 +49,8 @@ async function importCards() {
 	);
 	console.log(`After filtering: ${filtered.length} cards to import.`);
 
+	await prisma.card.deleteMany();
+
 	let imported = 0;
 	for (let i = 0; i < filtered.length; i += BATCH_SIZE) {
 		const batch = filtered.slice(i, i + BATCH_SIZE).map(mapCard);
