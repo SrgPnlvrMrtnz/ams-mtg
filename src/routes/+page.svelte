@@ -26,6 +26,8 @@
 	let statusMsg = $state('');
 	let cartas: ApiCard[] = $state([]);
 	let imagenesCartas: Record<string, string> = $state({});
+	let imagenesCartasBack: Record<string, string> = $state({});
+	let cartasGiradas: Set<string> = $state(new Set());
 	let hayMas = $state(false);
 
 	let cartaSeleccionada = $state<any>(null);
@@ -124,24 +126,27 @@
 	const mazoSeleccionado = $derived(mazos.find((m) => m.id === mazoSeleccionadoId) ?? null);
 	const cartasDelMazo = $derived<string[]>(mazoSeleccionado ? JSON.parse(mazoSeleccionado.cards) : []);
 
-	async function fetchImages(names: string[]): Promise<Record<string, string>> {
-		if (names.length === 0) return {};
+	async function fetchImages(names: string[]): Promise<{ front: Record<string, string>; back: Record<string, string> }> {
+		if (names.length === 0) return { front: {}, back: {} };
 		try {
 			const res = await fetch('https://api.scryfall.com/cards/collection', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ identifiers: names.map((name) => ({ name })) })
+				body: JSON.stringify({ identifiers: names.map((name) => ({ name: name.split(' // ')[0] })) })
 			});
-			if (!res.ok) return {};
+			if (!res.ok) return { front: {}, back: {} };
 			const data = await res.json();
-			const map: Record<string, string> = {};
+			const front: Record<string, string> = {};
+			const back: Record<string, string> = {};
 			for (const card of data.data ?? []) {
-				const img = card.image_uris?.png ?? card.card_faces?.[0]?.image_uris?.png;
-				if (img) map[card.name] = img;
+				const frontImg = card.image_uris?.png ?? card.card_faces?.[0]?.image_uris?.png;
+				if (frontImg) front[card.name] = frontImg;
+				const backImg = card.card_faces?.[1]?.image_uris?.png;
+				if (backImg) back[card.name] = backImg;
 			}
-			return map;
+			return { front, back };
 		} catch {
-			return {};
+			return { front: {}, back: {} };
 		}
 	}
 
@@ -168,7 +173,10 @@
 				statusMsg = '';
 				cartas = data.cards;
 				hayMas = data.hasMore;
-				imagenesCartas = await fetchImages(cartas.map((c) => c.name));
+				cartasGiradas = new Set();
+				const imgs = await fetchImages(cartas.map((c) => c.name));
+				imagenesCartas = imgs.front;
+				imagenesCartasBack = imgs.back;
 			}
 		} catch {
 			statusMsg = 'Error de red. Inténtalo de nuevo.';
@@ -180,13 +188,16 @@
 	async function cartaAleatoria() {
 		cartas = [];
 		imagenesCartas = {};
+		imagenesCartasBack = {};
+		cartasGiradas = new Set();
 		cargando = true;
 		statusMsg = 'Buscando una carta aleatoria...';
 		try {
 			const res = await fetch('https://api.scryfall.com/cards/random');
 			const sc = await res.json();
 			statusMsg = '';
-			const imgUrl = sc.image_uris?.png ?? sc.card_faces?.[0]?.image_uris?.png ?? '';
+			const frontImg = sc.image_uris?.png ?? sc.card_faces?.[0]?.image_uris?.png ?? '';
+			const backImg = sc.card_faces?.[1]?.image_uris?.png ?? '';
 
 			// Try to find in our catalog
 			const apiRes = await fetch(`/api/cards?q=${encodeURIComponent(sc.name)}&page=1`);
@@ -196,7 +207,8 @@
 				if (found) {
 					cartas = [found];
 					hayMas = false;
-					if (imgUrl) imagenesCartas = { [found.name]: imgUrl };
+					if (frontImg) imagenesCartas = { [found.name]: frontImg };
+					if (backImg) imagenesCartasBack = { [found.name]: backImg };
 					return;
 				}
 			}
@@ -212,7 +224,8 @@
 				tags: '[]'
 			}];
 			hayMas = false;
-			if (imgUrl) imagenesCartas = { [sc.name]: imgUrl };
+			if (frontImg) imagenesCartas = { [sc.name]: frontImg };
+			if (backImg) imagenesCartasBack = { [sc.name]: backImg };
 		} catch {
 			statusMsg = 'Error de red. Inténtalo de nuevo.';
 		} finally {
@@ -536,12 +549,34 @@
 		{#if !cargando}
 		<div class="card-grid">
 			{#each cartas as carta}
-				{@const imgUrl = imagenesCartas[carta.name]}
+				{@const estaGirada = cartasGiradas.has(carta.name)}
+				{@const imgFront = imagenesCartas[carta.name]}
+				{@const imgBack = imagenesCartasBack[carta.name]}
+				{@const imgUrl = estaGirada ? imgBack : imgFront}
+				{@const tieneDosCaras = !!imgBack}
 				<article class="card-item" onclick={() => verDetalleCompleto(carta)} style="cursor:pointer;" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && verDetalleCompleto(carta)}>
 					{#if imgUrl}
 						<img src={imgUrl} alt={carta.name} loading="lazy" />
 					{:else}
 						<div class="card-placeholder"><span>{carta.name}</span></div>
+					{/if}
+					{#if tieneDosCaras}
+						<button
+							class="card-flip-btn"
+							onclick={(e) => {
+								e.stopPropagation();
+								cartasGiradas = new Set(
+									estaGirada
+										? [...cartasGiradas].filter((n) => n !== carta.name)
+										: [...cartasGiradas, carta.name]
+								);
+							}}
+							title={estaGirada ? 'Ver cara delantera' : 'Girar carta'}
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+								<path fill-rule="evenodd" d="M13.854 2.146a.5.5 0 0 1 0 .708l-1 1a.5.5 0 0 1-.708-.708l.147-.146H11a3 3 0 0 0-3 3v1.5a.5.5 0 0 1-1 0V6a4 4 0 0 1 4-4h1.293l-.147-.146a.5.5 0 0 1 .708-.708zM2.5 7.5A.5.5 0 0 1 3 8v1a3 3 0 0 0 3 3h1.293l-.147-.146a.5.5 0 0 1 .708-.708l1 1a.5.5 0 0 1 0 .708l-1 1a.5.5 0 0 1-.708-.708L7.293 13H6a4 4 0 0 1-4-4V8a.5.5 0 0 1 .5-.5z" clip-rule="evenodd" />
+							</svg>
+						</button>
 					{/if}
 					<div class="card-actions">
 						<button
@@ -1451,6 +1486,40 @@
 	.card-item img {
 		width: 100%;
 		display: block;
+	}
+
+	/* Flip button for double-faced cards */
+	.card-flip-btn {
+		position: absolute;
+		top: 8px;
+		left: 8px;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		border: none;
+		background: rgba(8, 8, 14, 0.75);
+		color: #e8d5a3;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.2s ease, background 0.15s ease;
+		z-index: 5;
+		padding: 0;
+	}
+
+	.card-flip-btn svg {
+		width: 16px;
+		height: 16px;
+	}
+
+	.card-item:hover .card-flip-btn {
+		opacity: 1;
+	}
+
+	.card-flip-btn:hover {
+		background: rgba(139, 92, 246, 0.85);
 	}
 
 	/* Action buttons appear on hover */
