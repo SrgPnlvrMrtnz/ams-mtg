@@ -131,6 +131,31 @@
 	}
 
 	const COLOR_MAP: Record<string, string> = { W: '#c8b47c', U: '#2c6fad', B: '#888', R: '#c93c1c', G: '#2e7d4f' };
+
+	let exportOpen = $state(false);
+	let copiedFormat = $state('');
+
+	function buildList(fmt: 'plain' | 'moxfield' | 'arena' | 'mtgo'): string {
+		const counts: Record<string, number> = {};
+		for (const c of cartasEnMazo) counts[c] = (counts[c] || 0) + 1;
+		return Object.entries(counts)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([name, qty]) => {
+				if (fmt === 'plain')    return `${qty}x ${name}`;
+				if (fmt === 'moxfield') return `${qty} ${name}`;
+				if (fmt === 'arena')    return `${qty} ${name}`;
+				if (fmt === 'mtgo')     return `${qty} ${name}`;
+				return `${qty} ${name}`;
+			})
+			.join('\n');
+	}
+
+	async function copyFormat(fmt: 'plain' | 'moxfield' | 'arena' | 'mtgo') {
+		await navigator.clipboard.writeText(buildList(fmt));
+		copiedFormat = fmt;
+		setTimeout(() => { copiedFormat = ''; exportOpen = false; }, 1200);
+	}
+
 </script>
 
 <svelte:head>
@@ -180,6 +205,46 @@
 
 		<span class="card-count-badge">{totalCartas} {totalCartas === 1 ? 'carta' : 'cartas'}</span>
 
+<div class="export-wrap">
+			<button class="btn btn-ghost" onclick={() => (exportOpen = !exportOpen)}>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+					<path d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z" />
+					<path d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z" />
+				</svg>
+				Exportar mazo
+			</button>
+			{#if exportOpen}
+				<div class="export-dropdown">
+					<div class="export-title">Export options</div>
+					{#each [
+						{ key: 'moxfield', label: 'Copy for Moxfield' },
+						{ key: 'arena',    label: 'Copy for Arena' },
+						{ key: 'mtgo',     label: 'Copy for MTGO' },
+						{ key: 'plain',    label: 'Copy plain text' }
+					] as opt}
+						<button
+							class="export-option"
+							class:copied={copiedFormat === opt.key}
+							onclick={() => copyFormat(opt.key as any)}
+						>
+							{#if copiedFormat === opt.key}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+									<path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd" />
+								</svg>
+								¡Copiado!
+							{:else}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+									<path d="M5.5 3.5A1.5 1.5 0 0 1 7 2h2.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 1 .439 1.061V9.5A1.5 1.5 0 0 1 12 11H7a1.5 1.5 0 0 1-1.5-1.5v-6Z" />
+									<path d="M4 4.5a.5.5 0 0 0-.5.5v7a1.5 1.5 0 0 0 1.5 1.5h5a.5.5 0 0 0 0-1H5A.5.5 0 0 1 4.5 12V5a.5.5 0 0 0-.5-.5Z" />
+								</svg>
+								{opt.label}
+							{/if}
+						</button>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
 		<button class="btn btn-danger" onclick={eliminarMazo}>
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
 				<path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.712Z" clip-rule="evenodd" />
@@ -202,6 +267,7 @@
 		</div>
 	{/if}
 </header>
+
 
 <main class="deck-layout">
 	<section class="cards-section">
@@ -717,4 +783,54 @@
 	.rarity-uncommon { color: #a8c4d4; }
 	.rarity-rare { color: var(--gold); font-weight: 600; }
 	.rarity-mythic { color: #e87c3e; font-weight: 600; }
+
+	/* ── Export ── */
+	.export-wrap {
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.export-dropdown {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		min-width: 200px;
+		z-index: 200;
+		box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+		overflow: hidden;
+	}
+
+	.export-title {
+		padding: 9px 14px 7px;
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--text-muted);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.export-option {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: 9px;
+		padding: 10px 14px;
+		background: transparent;
+		border: none;
+		color: var(--text-secondary);
+		font-family: var(--font);
+		font-size: 13px;
+		cursor: pointer;
+		transition: background 0.15s, color 0.15s;
+		text-align: left;
+	}
+
+	.export-option svg { width: 14px; height: 14px; flex-shrink: 0; }
+	.export-option:hover { background: var(--surface-2); color: var(--text-primary); }
+	.export-option.copied { color: var(--green); }
+
 </style>

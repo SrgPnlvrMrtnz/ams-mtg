@@ -73,6 +73,26 @@
 	let modalComandanteError = $state('');
 	let modalComandanteSugerencias: string[] = $state([]);
 	let modalCargando = $state(false);
+	let modalImportText = $state('');
+
+	function parseImportList(text: string): string[] {
+		const result: string[] = [];
+		for (const raw of text.split('\n')) {
+			const line = raw.trim();
+			if (!line || line.startsWith('//') || line.startsWith('#')) continue;
+			if (/^(deck|sideboard|commander|mazo|main|mainboard)$/i.test(line)) continue;
+			const cleaned = line.replace(/\s*\([A-Z0-9-]+\)\s*\d+\s*$/, '').trim();
+			const m = cleaned.match(/^(\d+)[x ]?\s*(.+)$/);
+			if (m) {
+				const qty = Math.min(Math.max(1, parseInt(m[1])), 99);
+				const name = m[2].trim();
+				if (name) for (let i = 0; i < qty; i++) result.push(name);
+			} else if (cleaned) {
+				result.push(cleaned);
+			}
+		}
+		return result;
+	}
 
 	const COMMANDER_FORMATS = ['Commander', 'Brawl', 'Oathbreaker'];
 
@@ -255,6 +275,7 @@
 		modalComandanteValido = false;
 		modalComandanteError = '';
 		modalComandanteSugerencias = [];
+		modalImportText = '';
 		modalAbierto = true;
 	}
 
@@ -314,7 +335,7 @@
 					description: modalDescripcion || null,
 					colorIdentity: modalColores,
 					commander: modalComandantes.length > 0 ? JSON.stringify(modalComandantes) : null,
-					cards: modalComandantes
+					cards: [...modalComandantes, ...parseImportList(modalImportText)]
 				})
 			});
 			if (res.ok) {
@@ -827,6 +848,20 @@
 					{/if}
 				</div>
 			{/if}
+
+			<div class="form-field">
+				<label class="field-label" for="modal-import">
+					Importar lista
+					<span class="field-hint">— opcional, cualquier formato (Moxfield, Arena, MTGO...)</span>
+				</label>
+				<textarea
+					id="modal-import"
+					class="import-textarea"
+					bind:value={modalImportText}
+					placeholder="1 Lightning Bolt&#10;4 Counterspell&#10;..."
+					rows="5"
+				></textarea>
+			</div>
 			</div>
 
 			<div class="modal-footer">
@@ -1748,6 +1783,22 @@
 	:global(.input-error) {
 		border-color: var(--danger) !important;
 	}
+
+	.import-textarea {
+		width: 100%;
+		background: var(--surface-2);
+		border: 1px solid var(--border);
+		color: var(--text-primary);
+		padding: 10px 12px;
+		border-radius: var(--radius-sm);
+		font-family: 'SF Mono', 'Consolas', monospace;
+		font-size: 12px;
+		line-height: 1.6;
+		resize: vertical;
+		outline: none;
+		transition: border-color 0.15s;
+	}
+	.import-textarea:focus { border-color: var(--border-focus); }
 
 	.commander-list {
 		list-style: none;
