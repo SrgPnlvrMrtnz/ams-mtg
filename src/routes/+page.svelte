@@ -430,8 +430,8 @@
 		</div>
 
 		<div class="header-actions">
-			<a href="/partida" class="btn btn-danger">Modo Partida</a>
-			<button class="btn btn-logout" onclick={logout}>Cerrar sesión</button>
+			<a href="/partida" class="btn btn-logout">Modo Partida</a>
+			<button class="btn btn-danger" onclick={logout}>Cerrar sesión</button>
 		</div>
 	</div>
 

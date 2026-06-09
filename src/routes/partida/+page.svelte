@@ -256,8 +256,7 @@
 	<div class="overlay" onclick={() => (overlayVisible = false)}>
 		<div class="overlay-card {overlayType} {spinning ? 'spin' : ''} {overlayFinal ? 'final' : ''}">
 			{#if overlayType === 'coin'}
-				<div class="coin-face front">{overlayFinal ? (overlayResult as string) : '?'}</div>
-				<div class="coin-face back">{overlayFinal ? (overlayResult as string) : '?'}</div>
+				<div class="coin-face">{overlayFinal ? (overlayResult as string) : '?'}</div>
 			{:else}
 				<span class="dice-value">{overlayResult}</span>
 			{/if}
