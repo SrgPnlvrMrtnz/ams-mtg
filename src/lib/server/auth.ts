@@ -32,7 +32,7 @@ export async function verifyJwt(token: string): Promise<{ userId: string; email:
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 
 export async function hashPassword(password: string): Promise<string> {
-	return bcrypt.hash(password, 12);
+	return bcrypt.hash(password, 12); //12 es un valor, le dice a bcrypt cuanto trabajo tiene que hacer, a mayor valor, más lento pero seguro, 12 es un valor estándar
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {

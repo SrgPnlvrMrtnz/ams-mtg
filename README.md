@@ -106,10 +106,10 @@ El módulo de IA utiliza **etiquetado basado en reglas** (multi-label) en lugar 
 
 ### Tags asignados a cada carta
 
-| Categoría | Tags |
-|-----------|------|
-| **Coste de maná** | `bajo-coste` (cmc ≤ 2), `coste-medio` (3–4), `alto-coste` (≥ 5) |
-| **Tipo de carta** | `criatura`, `instantaneo`, `conjuro`, `artefacto`, `encantamiento`, `tierra`, `planeswalker` |
+| Categoría         | Tags                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Coste de maná** | `bajo-coste` (cmc ≤ 2), `coste-medio` (3–4), `alto-coste` (≥ 5)                                                  |
+| **Tipo de carta** | `criatura`, `instantaneo`, `conjuro`, `artefacto`, `encantamiento`, `tierra`, `planeswalker`                     |
 | **Rol funcional** | `destruccion`, `robo-cartas`, `ramp`, `contrahechizo`, `tokens`, `evasion`, `proteccion`, `vida`, `daño-directo` |
 
 Las reglas se aplican sobre `oracle_text`, `type_line`, `keywords` y `cmc` de cada carta.
@@ -118,10 +118,10 @@ Las reglas se aplican sobre `oracle_text`, `type_line`, `keywords` y `cmc` de ca
 
 Lee las ~34 000 cartas del SQLite y escribe el array de tags en la columna `tags` de cada carta. Ejemplos reales:
 
-- *Lightning Bolt* → `["instantaneo", "bajo-coste", "daño-directo"]`
-- *Llanowar Elves* → `["criatura", "bajo-coste", "ramp"]`
-- *Counterspell* → `["instantaneo", "bajo-coste", "contrahechizo"]`
-- *Sol Ring* → `["artefacto", "bajo-coste", "ramp"]`
+- _Lightning Bolt_ → `["instantaneo", "bajo-coste", "daño-directo"]`
+- _Llanowar Elves_ → `["criatura", "bajo-coste", "ramp"]`
+- _Counterspell_ → `["instantaneo", "bajo-coste", "contrahechizo"]`
+- _Sol Ring_ → `["artefacto", "bajo-coste", "ramp"]`
 
 ### Analizador de mazos
 
@@ -137,18 +137,18 @@ El endpoint `POST /api/decks/analyze` recibe la lista de cartas del mazo y devue
 
 ## Tecnologías
 
-| Tecnología | Versión | Rol |
-|------------|---------|-----|
-| SvelteKit | 2.x | Framework web (SSR + API routes) |
-| TypeScript | 6.x | Lenguaje principal |
-| Tailwind CSS | 4.x | Estilos |
-| Prisma | 5.x | ORM para SQLite |
-| SQLite | — | Base de datos local |
-| Python | 3.13 | Script de etiquetado de cartas |
-| pandas | 2.x | Manipulación de datos en Python |
-| Scryfall API | — | Fuente de imágenes y carta aleatoria |
-| bcryptjs | 3.x | Hash de contraseñas |
-| jose | 6.x | Autenticación JWT |
+| Tecnología   | Versión | Rol                                  |
+| ------------ | ------- | ------------------------------------ |
+| SvelteKit    | 2.x     | Framework web (SSR + API routes)     |
+| TypeScript   | 6.x     | Lenguaje principal                   |
+| Tailwind CSS | 4.x     | Estilos                              |
+| Prisma       | 5.x     | ORM para SQLite                      |
+| SQLite       | —       | Base de datos local                  |
+| Python       | 3.13    | Script de etiquetado de cartas       |
+| pandas       | 2.x     | Manipulación de datos en Python      |
+| Scryfall API | —       | Fuente de imágenes y carta aleatoria |
+| bcryptjs     | 3.x     | Hash de contraseñas                  |
+| jose         | 6.x     | Autenticación JWT                    |
 
 ---
 
@@ -206,17 +206,17 @@ La aplicación estará disponible en `http://localhost:5173`.
 
 ## Scripts disponibles
 
-| Script | Descripción |
-|--------|-------------|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run build` | Build de producción |
-| `npm run preview` | Preview del build |
-| `npm run setup` | Configuración inicial post-clonado |
-| `npm run import-cards` | Importar catálogo de Scryfall a SQLite |
-| `npm run tag-cards` | Ejecutar el etiquetado de cartas con IA |
-| `npm run generate-secret` | Generar un JWT_SECRET aleatorio |
-| `npm run check` | Comprobación de tipos TypeScript |
-| `npm run lint` | Linting y formato |
+| Script                    | Descripción                             |
+| ------------------------- | --------------------------------------- |
+| `npm run dev`             | Servidor de desarrollo                  |
+| `npm run build`           | Build de producción                     |
+| `npm run preview`         | Preview del build                       |
+| `npm run setup`           | Configuración inicial post-clonado      |
+| `npm run import-cards`    | Importar catálogo de Scryfall a SQLite  |
+| `npm run tag-cards`       | Ejecutar el etiquetado de cartas con IA |
+| `npm run generate-secret` | Generar un JWT_SECRET aleatorio         |
+| `npm run check`           | Comprobación de tipos TypeScript        |
+| `npm run lint`            | Linting y formato                       |
 
 ---
 
@@ -224,29 +224,29 @@ La aplicación estará disponible en `http://localhost:5173`.
 
 ### Autenticación
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| POST | `/api/auth/register` | Registro de usuario |
-| POST | `/api/auth/login` | Inicio de sesión (devuelve cookie JWT) |
-| POST | `/api/auth/logout` | Cierre de sesión |
+| Método | Ruta                 | Descripción                            |
+| ------ | -------------------- | -------------------------------------- |
+| POST   | `/api/auth/register` | Registro de usuario                    |
+| POST   | `/api/auth/login`    | Inicio de sesión (devuelve cookie JWT) |
+| POST   | `/api/auth/logout`   | Cierre de sesión                       |
 
 ### Cartas
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/api/cards?q=&colors=W,U&page=1` | Búsqueda paginada (20 por página) |
-| GET | `/api/cards/:id` | Detalle de una carta |
+| Método | Ruta                              | Descripción                       |
+| ------ | --------------------------------- | --------------------------------- |
+| GET    | `/api/cards?q=&colors=W,U&page=1` | Búsqueda paginada (20 por página) |
+| GET    | `/api/cards/:id`                  | Detalle de una carta              |
 
 ### Mazos
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/api/decks` | Listar mazos del usuario |
-| POST | `/api/decks` | Crear mazo |
-| PUT | `/api/decks/:id` | Actualizar mazo |
-| DELETE | `/api/decks/:id` | Eliminar mazo |
-| GET | `/api/decks/:id/analysis` | Análisis de un mazo guardado en BD |
-| POST | `/api/decks/analyze` | Análisis ad-hoc (acepta lista de nombres) |
+| Método | Ruta                      | Descripción                               |
+| ------ | ------------------------- | ----------------------------------------- |
+| GET    | `/api/decks`              | Listar mazos del usuario                  |
+| POST   | `/api/decks`              | Crear mazo                                |
+| PUT    | `/api/decks/:id`          | Actualizar mazo                           |
+| DELETE | `/api/decks/:id`          | Eliminar mazo                             |
+| GET    | `/api/decks/:id/analysis` | Análisis de un mazo guardado en BD        |
+| POST   | `/api/decks/analyze`      | Análisis ad-hoc (acepta lista de nombres) |
 
 ---
 
@@ -294,4 +294,4 @@ Para desarrollo local se usa SQLite en archivo (`prisma/dev.db`), que está excl
 
 ---
 
-> *AMS MTG no está afiliado ni patrocinado por Wizards of the Coast. Magic: The Gathering es marca registrada de Wizards of the Coast LLC.*
+> _AMS MTG no está afiliado ni patrocinado por Wizards of the Coast. Magic: The Gathering es marca registrada de Wizards of the Coast LLC._

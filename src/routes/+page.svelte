@@ -32,22 +32,24 @@
 
 	let cartaSeleccionada = $state<any>(null);
 
-	function verDetalle(carta: any) { cartaSeleccionada = carta; }
+	function verDetalle(carta: any) {
+		cartaSeleccionada = carta;
+	}
 	async function verDetalleCompleto(carta: ApiCard) {
 		// Fetch full card data from Scryfall for oracle text, etc.
 		try {
-			const res = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(carta.name)}`);
+			const res = await fetch(
+				`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(carta.name)}`
+			);
 			if (res.ok) cartaSeleccionada = await res.json();
 			else cartaSeleccionada = carta;
 		} catch {
 			cartaSeleccionada = carta;
 		}
 	}
-	function cerrarDetalle() { cartaSeleccionada = null; }
-
-	let analisisVisible = $state(false);
-	let analisisData: { distribution: { tag: string; label: string; count: number; percentage: number }[]; alerts: string[]; total: number } | null = $state(null);
-	let cargandoAnalisis = $state(false);
+	function cerrarDetalle() {
+		cartaSeleccionada = null;
+	}
 
 	type Deck = {
 		id: string;
@@ -124,15 +126,29 @@
 	}
 
 	const mazoSeleccionado = $derived(mazos.find((m) => m.id === mazoSeleccionadoId) ?? null);
-	const cartasDelMazo = $derived<string[]>(mazoSeleccionado ? JSON.parse(mazoSeleccionado.cards) : []);
+	const cartasDelMazo = $derived<string[]>(
+		mazoSeleccionado ? JSON.parse(mazoSeleccionado.cards) : []
+	);
 
-	async function fetchImages(names: string[]): Promise<{ front: Record<string, string>; back: Record<string, string> }> {
+	const cartasDelMazoAgrupadas = $derived.by(() => {
+		const conteo: Record<string, number> = {};
+		for (const c of cartasDelMazo) conteo[c] = (conteo[c] || 0) + 1;
+		return Object.entries(conteo)
+			.map(([nombre, cantidad]) => ({ nombre, cantidad }))
+			.sort((a, b) => a.nombre.localeCompare(b.nombre));
+	});
+
+	async function fetchImages(
+		names: string[]
+	): Promise<{ front: Record<string, string>; back: Record<string, string> }> {
 		if (names.length === 0) return { front: {}, back: {} };
 		try {
 			const res = await fetch('https://api.scryfall.com/cards/collection', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ identifiers: names.map((name) => ({ name: name.split(' // ')[0] })) })
+				body: JSON.stringify({
+					identifiers: names.map((name) => ({ name: name.split(' // ')[0] }))
+				})
 			});
 			if (!res.ok) return { front: {}, back: {} };
 			const data = await res.json();
@@ -213,16 +229,18 @@
 				}
 			}
 			// Fallback for cards not in our catalog
-			cartas = [{
-				id: sc.oracle_id ?? '',
-				name: sc.name,
-				mana_cost: sc.mana_cost ?? null,
-				cmc: sc.cmc ?? 0,
-				type_line: sc.type_line ?? '',
-				colors: JSON.stringify(sc.colors ?? []),
-				rarity: sc.rarity ?? null,
-				tags: '[]'
-			}];
+			cartas = [
+				{
+					id: sc.oracle_id ?? '',
+					name: sc.name,
+					mana_cost: sc.mana_cost ?? null,
+					cmc: sc.cmc ?? 0,
+					type_line: sc.type_line ?? '',
+					colors: JSON.stringify(sc.colors ?? []),
+					rarity: sc.rarity ?? null,
+					tags: '[]'
+				}
+			];
 			hayMas = false;
 			if (frontImg) imagenesCartas = { [sc.name]: frontImg };
 			if (backImg) imagenesCartasBack = { [sc.name]: backImg };
@@ -304,13 +322,20 @@
 		modalComandanteValido = false;
 		modalComandanteError = '';
 		clearTimeout(_comandanteTimer);
-		if (q.length < 2) { modalComandanteSugerencias = []; return; }
+		if (q.length < 2) {
+			modalComandanteSugerencias = [];
+			return;
+		}
 		_comandanteTimer = setTimeout(async () => {
 			try {
-				const res = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(q)}`);
+				const res = await fetch(
+					`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(q)}`
+				);
 				const data = await res.json();
 				modalComandanteSugerencias = data.data?.slice(0, 6) ?? [];
-			} catch { modalComandanteSugerencias = []; }
+			} catch {
+				modalComandanteSugerencias = [];
+			}
 		}, 300);
 	}
 
@@ -332,7 +357,11 @@
 		if (!modalNombre.trim()) return;
 
 		// Validate commander input if format requires it
-		if (COMMANDER_FORMATS.includes(modalFormato) && modalComandanteInput.trim() && !modalComandanteValido) {
+		if (
+			COMMANDER_FORMATS.includes(modalFormato) &&
+			modalComandanteInput.trim() &&
+			!modalComandanteValido
+		) {
 			modalComandanteError = 'Selecciona el nombre exacto de la lista de sugerencias.';
 			return;
 		}
@@ -379,13 +408,16 @@
 		}
 	}
 
-	async function quitarDelMazo(i: number) {
+	async function quitarDelMazo(nombre: string) {
 		if (!mazoSeleccionadoId || !mazoSeleccionado) return;
-		const nuevasCartas = cartasDelMazo.filter((_, idx) => idx !== i);
+		const lista = [...cartasDelMazo];
+		const idx = lista.lastIndexOf(nombre);
+		if (idx === -1) return;
+		lista.splice(idx, 1);
 		const res = await fetch(`/api/decks/${mazoSeleccionadoId}`, {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ cards: nuevasCartas })
+			body: JSON.stringify({ cards: lista })
 		});
 		if (res.ok) {
 			const updated = await res.json();
@@ -400,35 +432,26 @@
 		if (res.ok) {
 			mazos = mazos.filter((m) => m.id !== mazoSeleccionadoId);
 			mazoSeleccionadoId = '';
-			analisisVisible = false;
 		}
 	}
 
-	async function analizarMazo() {
-		if (!mazoSeleccionadoId || cartasDelMazo.length === 0) return;
-		analisisVisible = true;
-		analisisData = null;
-		cargandoAnalisis = true;
-		try {
-			const res = await fetch('/api/decks/analyze', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ cards: cartasDelMazo })
-			});
-			if (res.ok) analisisData = await res.json();
-		} finally {
-			cargandoAnalisis = false;
-		}
-	}
-
-	const FORMATOS = ['Standard', 'Pioneer', 'Modern', 'Legacy', 'Vintage', 'Commander', 'Pauper', 'Casual'];
+	const FORMATOS = [
+		'Standard',
+		'Pioneer',
+		'Modern',
+		'Legacy',
+		'Vintage',
+		'Commander',
+		'Pauper',
+		'Casual'
+	];
 
 	const manaColors = [
 		{ code: 'W', label: 'Blanco', symbol: 'W', cls: 'mana-w' },
-		{ code: 'U', label: 'Azul',   symbol: 'U', cls: 'mana-u' },
-		{ code: 'B', label: 'Negro',  symbol: 'B', cls: 'mana-b' },
-		{ code: 'R', label: 'Rojo',   symbol: 'R', cls: 'mana-r' },
-		{ code: 'G', label: 'Verde',  symbol: 'G', cls: 'mana-g' }
+		{ code: 'U', label: 'Azul', symbol: 'U', cls: 'mana-u' },
+		{ code: 'B', label: 'Negro', symbol: 'B', cls: 'mana-b' },
+		{ code: 'R', label: 'Rojo', symbol: 'R', cls: 'mana-r' },
+		{ code: 'G', label: 'Verde', symbol: 'G', cls: 'mana-g' }
 	];
 </script>
 
@@ -436,7 +459,10 @@
 	<title>AMS · MTG — Card Browser</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+		rel="stylesheet"
+	/>
 </svelte:head>
 
 <!-- HEADER -->
@@ -449,8 +475,18 @@
 
 		<div class="search-row">
 			<div class="search-field">
-				<svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-					<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
+				<svg
+					class="search-icon"
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					aria-hidden="true"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 				<input
 					type="text"
@@ -499,12 +535,19 @@
 
 <!-- MAIN LAYOUT -->
 <main class="app-layout">
-
 	<!-- Sidebar: Favoritos -->
 	<aside class="panel">
 		<div class="panel-header">
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="panel-icon" aria-hidden="true">
-				<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 20 20"
+				fill="currentColor"
+				class="panel-icon"
+				aria-hidden="true"
+			>
+				<path
+					d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+				/>
 			</svg>
 			<h2>Favoritos</h2>
 			{#if favoritos.length > 0}
@@ -521,7 +564,9 @@
 						<span class="item-name">{nombre}</span>
 						<button class="btn-icon btn-remove" onclick={() => eliminarFav(i)} title="Eliminar">
 							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-								<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+								<path
+									d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+								/>
 							</svg>
 						</button>
 					</li>
@@ -530,7 +575,6 @@
 		{/if}
 
 		<div class="panel-divider"></div>
-
 	</aside>
 
 	<!-- Card Grid -->
@@ -547,69 +591,96 @@
 		{/if}
 
 		{#if !cargando}
-		<div class="card-grid">
-			{#each cartas as carta}
-				{@const estaGirada = cartasGiradas.has(carta.name)}
-				{@const imgFront = imagenesCartas[carta.name]}
-				{@const imgBack = imagenesCartasBack[carta.name]}
-				{@const imgUrl = estaGirada ? imgBack : imgFront}
-				{@const tieneDosCaras = !!imgBack}
-				<article class="card-item" onclick={() => verDetalleCompleto(carta)} style="cursor:pointer;" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && verDetalleCompleto(carta)}>
-					{#if imgUrl}
-						<img src={imgUrl} alt={carta.name} loading="lazy" />
-					{:else}
-						<div class="card-placeholder"><span>{carta.name}</span></div>
-					{/if}
-					{#if tieneDosCaras}
-						<button
-							class="card-flip-btn"
-							onclick={(e) => {
-								e.stopPropagation();
-								cartasGiradas = new Set(
-									estaGirada
-										? [...cartasGiradas].filter((n) => n !== carta.name)
-										: [...cartasGiradas, carta.name]
-								);
-							}}
-							title={estaGirada ? 'Ver cara delantera' : 'Girar carta'}
-						>
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-								<path fill-rule="evenodd" d="M13.854 2.146a.5.5 0 0 1 0 .708l-1 1a.5.5 0 0 1-.708-.708l.147-.146H11a3 3 0 0 0-3 3v1.5a.5.5 0 0 1-1 0V6a4 4 0 0 1 4-4h1.293l-.147-.146a.5.5 0 0 1 .708-.708zM2.5 7.5A.5.5 0 0 1 3 8v1a3 3 0 0 0 3 3h1.293l-.147-.146a.5.5 0 0 1 .708-.708l1 1a.5.5 0 0 1 0 .708l-1 1a.5.5 0 0 1-.708-.708L7.293 13H6a4 4 0 0 1-4-4V8a.5.5 0 0 1 .5-.5z" clip-rule="evenodd" />
-							</svg>
-						</button>
-					{/if}
-					<div class="card-actions">
-						<button
-							class="card-action-btn action-fav"
-							onclick={(e) => { e.stopPropagation(); agregarFavorito(carta.name); }}
-							title="Añadir a favoritos"
-						>
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-								<path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z" />
-								<path d="M6.97 5.678a.75.75 0 0 1 .638-.428h.784a.75.75 0 0 1 .638.428l.24.484.52-.066a.75.75 0 0 1 .853.588.75.75 0 0 1-.193.676l-.378.368.089.519a.75.75 0 0 1-1.086.79L8 8.56l-.465.479a.75.75 0 0 1-1.086-.79l.089-.52-.378-.367a.75.75 0 0 1 .66-1.264l.52.066.24-.484Z" />
-							</svg>
-							Favorito
-						</button>
-						<button
-							class="card-action-btn action-deck"
-							onclick={(e) => { e.stopPropagation(); agregarAlMazo(carta.name); }}
-							title="Añadir al mazo"
-						>
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-								<path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-							</svg>
-							Al mazo
-						</button>
-					</div>
-				</article>
-			{/each}
-		</div>
+			<div class="card-grid">
+				{#each cartas as carta}
+					{@const estaGirada = cartasGiradas.has(carta.name)}
+					{@const imgFront = imagenesCartas[carta.name]}
+					{@const imgBack = imagenesCartasBack[carta.name]}
+					{@const imgUrl = estaGirada ? imgBack : imgFront}
+					{@const tieneDosCaras = !!imgBack}
+					<article
+						class="card-item"
+						onclick={() => verDetalleCompleto(carta)}
+						style="cursor:pointer;"
+						role="button"
+						tabindex="0"
+						onkeydown={(e) => e.key === 'Enter' && verDetalleCompleto(carta)}
+					>
+						{#if imgUrl}
+							<img src={imgUrl} alt={carta.name} loading="lazy" />
+						{:else}
+							<div class="card-placeholder"><span>{carta.name}</span></div>
+						{/if}
+						{#if tieneDosCaras}
+							<button
+								class="card-flip-btn"
+								onclick={(e) => {
+									e.stopPropagation();
+									cartasGiradas = new Set(
+										estaGirada
+											? [...cartasGiradas].filter((n) => n !== carta.name)
+											: [...cartasGiradas, carta.name]
+									);
+								}}
+								title={estaGirada ? 'Ver cara delantera' : 'Girar carta'}
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+									<path
+										fill-rule="evenodd"
+										d="M13.854 2.146a.5.5 0 0 1 0 .708l-1 1a.5.5 0 0 1-.708-.708l.147-.146H11a3 3 0 0 0-3 3v1.5a.5.5 0 0 1-1 0V6a4 4 0 0 1 4-4h1.293l-.147-.146a.5.5 0 0 1 .708-.708zM2.5 7.5A.5.5 0 0 1 3 8v1a3 3 0 0 0 3 3h1.293l-.147-.146a.5.5 0 0 1 .708-.708l1 1a.5.5 0 0 1 0 .708l-1 1a.5.5 0 0 1-.708-.708L7.293 13H6a4 4 0 0 1-4-4V8a.5.5 0 0 1 .5-.5z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						{/if}
+						<div class="card-actions">
+							<button
+								class="card-action-btn action-fav"
+								onclick={(e) => {
+									e.stopPropagation();
+									agregarFavorito(carta.name);
+								}}
+								title="Añadir a favoritos"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+									<path
+										d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
+									/>
+									<path
+										d="M6.97 5.678a.75.75 0 0 1 .638-.428h.784a.75.75 0 0 1 .638.428l.24.484.52-.066a.75.75 0 0 1 .853.588.75.75 0 0 1-.193.676l-.378.368.089.519a.75.75 0 0 1-1.086.79L8 8.56l-.465.479a.75.75 0 0 1-1.086-.79l.089-.52-.378-.367a.75.75 0 0 1 .66-1.264l.52.066.24-.484Z"
+									/>
+								</svg>
+								Favorito
+							</button>
+							<button
+								class="card-action-btn action-deck"
+								onclick={(e) => {
+									e.stopPropagation();
+									agregarAlMazo(carta.name);
+								}}
+								title="Añadir al mazo"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+									<path
+										d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+									/>
+								</svg>
+								Al mazo
+							</button>
+						</div>
+					</article>
+				{/each}
+			</div>
 		{/if}
 
 		<div class="pager">
 			<button class="btn btn-ghost pager-btn" onclick={anterior} disabled={puntero === 0}>
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+					<path
+						fill-rule="evenodd"
+						d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 				Anterior
 			</button>
@@ -617,18 +688,29 @@
 			<button class="btn btn-ghost pager-btn" onclick={siguiente}>
 				Siguiente
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+					<path
+						fill-rule="evenodd"
+						d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 			</button>
 		</div>
-
 	</section>
 
 	<!-- Sidebar: Mazos -->
 	<aside class="panel">
 		<div class="panel-header">
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="panel-icon" aria-hidden="true">
-				<path d="M5 3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5ZM5 11a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H5ZM11 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V5ZM14 11a1 1 0 0 1 1 1v1h1a1 1 0 1 1 0 2h-1v1a1 1 0 1 1-2 0v-1h-1a1 1 0 1 1 0-2h1v-1a1 1 0 0 1 1-1Z" />
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 20 20"
+				fill="currentColor"
+				class="panel-icon"
+				aria-hidden="true"
+			>
+				<path
+					d="M5 3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5ZM5 11a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H5ZM11 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V5ZM14 11a1 1 0 0 1 1 1v1h1a1 1 0 1 1 0 2h-1v1a1 1 0 1 1-2 0v-1h-1a1 1 0 1 1 0-2h1v-1a1 1 0 0 1 1-1Z"
+				/>
 			</svg>
 			<h2>Mis Mazos</h2>
 			{#if mazos.length > 0}
@@ -636,7 +718,11 @@
 			{/if}
 		</div>
 
-		<button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px;" onclick={abrirModal}>
+		<button
+			class="btn btn-primary"
+			style="width:100%;justify-content:center;margin-bottom:10px;"
+			onclick={abrirModal}
+		>
 			+ Nuevo mazo
 		</button>
 
@@ -654,7 +740,13 @@
 
 		{#if mazoSeleccionado}
 			{#if mazoSeleccionado.commander}
-				{@const cmds = (() => { try { return JSON.parse(mazoSeleccionado.commander); } catch { return [mazoSeleccionado.commander]; } })()}
+				{@const cmds = (() => {
+					try {
+						return JSON.parse(mazoSeleccionado.commander);
+					} catch {
+						return [mazoSeleccionado.commander];
+					}
+				})()}
 				{#each cmds as cmd}
 					<p class="deck-meta">⚔ {cmd}</p>
 				{/each}
@@ -663,7 +755,8 @@
 				<p class="deck-meta deck-desc">{mazoSeleccionado.description}</p>
 			{/if}
 			<div class="deck-count">
-				{cartasDelMazo.length} {cartasDelMazo.length === 1 ? 'carta' : 'cartas'}
+				{cartasDelMazo.length}
+				{cartasDelMazo.length === 1 ? 'carta' : 'cartas'}
 			</div>
 			{#if cartasDelMazo.length === 0}
 				<p class="empty-hint">Este mazo está vacío.</p>
@@ -672,60 +765,32 @@
 					<a href="/mazo/{mazoSeleccionadoId}" class="btn btn-ghost ver-mazo-btn">Ver mazo</a>
 				</div>
 				<ul class="item-list">
-					{#each cartasDelMazo as carta, i}
+					{#each cartasDelMazoAgrupadas as { nombre, cantidad } (nombre)}
 						<li class="item-row">
-							<span class="item-name">{carta}</span>
-							<button class="btn-icon btn-remove" onclick={() => quitarDelMazo(i)} title="Quitar">
+							<span class="item-name">{cantidad > 1 ? `${nombre} ×${cantidad}` : nombre}</span>
+							<button
+								class="btn-icon btn-remove"
+								onclick={() => quitarDelMazo(nombre)}
+								title="Quitar una copia"
+							>
 								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-									<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+									<path
+										d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+									/>
 								</svg>
 							</button>
 						</li>
 					{/each}
 				</ul>
-				<button class="btn btn-primary analyze-btn" onclick={analizarMazo}>Analizar mazo</button>
 			{/if}
 
-			<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;color:var(--danger);border-color:rgba(224,67,74,0.3);" onclick={eliminarMazo}>
+			<button
+				class="btn btn-ghost"
+				style="width:100%;justify-content:center;margin-top:8px;color:var(--danger);border-color:rgba(224,67,74,0.3);"
+				onclick={eliminarMazo}
+			>
 				Eliminar mazo
 			</button>
-
-			{#if analisisVisible}
-				<div class="analysis-panel">
-					<div class="analysis-header">
-						<span>Análisis</span>
-						<button class="btn-icon btn-remove" title="Cerrar" onclick={() => { analisisVisible = false; analisisData = null; }}>
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-								<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-							</svg>
-						</button>
-					</div>
-					{#if cargandoAnalisis}
-						<p class="status-text" style="font-size:11px;">Analizando...</p>
-					{:else if analisisData}
-						{#if analisisData.alerts.length === 0}
-							<div class="alert-ok">✓ Mazo equilibrado</div>
-						{:else}
-							<div class="alerts-list">
-								{#each analisisData.alerts as alerta}
-									<div class="alert-item">⚠ {alerta}</div>
-								{/each}
-							</div>
-						{/if}
-						<div class="tag-distribution">
-							{#each analisisData.distribution.slice(0, 8) as entry}
-								<div class="tag-row">
-									<span class="tag-label">{entry.label}</span>
-									<div class="tag-bar">
-										<div class="tag-fill" style="width:{entry.percentage}%"></div>
-									</div>
-									<span class="tag-count">{entry.count}</span>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{/if}
 		{/if}
 	</aside>
 </main>
@@ -736,14 +801,17 @@
 		<div class="detalle-panel" onclick={(e) => e.stopPropagation()}>
 			<button class="detalle-cerrar" onclick={cerrarDetalle} title="Cerrar">
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-					<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+					<path
+						d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+					/>
 				</svg>
 			</button>
 			<div class="detalle-body">
 				{#if cartaSeleccionada.image_uris?.png || cartaSeleccionada.card_faces?.[0]?.image_uris?.png}
 					<img
 						class="detalle-img"
-						src={cartaSeleccionada.image_uris?.png ?? cartaSeleccionada.card_faces?.[0]?.image_uris?.png}
+						src={cartaSeleccionada.image_uris?.png ??
+							cartaSeleccionada.card_faces?.[0]?.image_uris?.png}
 						alt={cartaSeleccionada.name}
 					/>
 				{/if}
@@ -770,13 +838,17 @@
 					{#if cartaSeleccionada.power != null && cartaSeleccionada.toughness != null}
 						<div class="detalle-fila">
 							<span class="detalle-label">Fuerza / Resistencia</span>
-							<span class="detalle-valor">{cartaSeleccionada.power} / {cartaSeleccionada.toughness}</span>
+							<span class="detalle-valor"
+								>{cartaSeleccionada.power} / {cartaSeleccionada.toughness}</span
+							>
 						</div>
 					{/if}
 					{#if cartaSeleccionada.rarity}
 						<div class="detalle-fila">
 							<span class="detalle-label">Rareza</span>
-							<span class="detalle-valor rarity-{cartaSeleccionada.rarity}">{cartaSeleccionada.rarity}</span>
+							<span class="detalle-valor rarity-{cartaSeleccionada.rarity}"
+								>{cartaSeleccionada.rarity}</span
+							>
 						</div>
 					{/if}
 					{#if cartaSeleccionada.set_name}
@@ -799,7 +871,9 @@
 				<h2>Nuevo Mazo</h2>
 				<button class="btn-icon btn-remove" title="Cerrar" onclick={() => (modalAbierto = false)}>
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-						<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+						<path
+							d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+						/>
 					</svg>
 				</button>
 			</div>
@@ -822,7 +896,12 @@
 
 				<div class="form-field">
 					<label class="field-label" for="modal-desc">Descripción</label>
-					<textarea id="modal-desc" bind:value={modalDescripcion} placeholder="Estrategia, notas..." rows="2"></textarea>
+					<textarea
+						id="modal-desc"
+						bind:value={modalDescripcion}
+						placeholder="Estrategia, notas..."
+						rows="2"
+					></textarea>
 				</div>
 
 				<div class="form-field">
@@ -841,67 +920,71 @@
 					</div>
 				</div>
 
-			{#if COMMANDER_FORMATS.includes(modalFormato)}
-				<div class="form-field">
-					<label class="field-label" for="modal-comandante">
-						Comandante
-						<span class="field-hint">— puedes añadir varios (Partner, Background...)</span>
-					</label>
+				{#if COMMANDER_FORMATS.includes(modalFormato)}
+					<div class="form-field">
+						<label class="field-label" for="modal-comandante">
+							Comandante
+							<span class="field-hint">— puedes añadir varios (Partner, Background...)</span>
+						</label>
 
-					{#if modalComandantes.length > 0}
-						<ul class="commander-list">
-							{#each modalComandantes as cmd, i}
-								<li class="commander-tag">
-									<span>{cmd}</span>
-									<button onclick={() => quitarComandante(i)} title="Quitar">×</button>
-								</li>
-							{/each}
-						</ul>
-					{/if}
-
-					<div class="autocomplete-wrap">
-						<input
-							id="modal-comandante"
-							type="text"
-							value={modalComandanteInput}
-							oninput={(e) => buscarComandante((e.target as HTMLInputElement).value)}
-							placeholder="Buscar y seleccionar comandante..."
-							class:input-error={!!modalComandanteError}
-						/>
-						{#if modalComandanteSugerencias.length > 0}
-							<ul class="autocomplete-list">
-								{#each modalComandanteSugerencias as sug}
-									<li>
-										<button onclick={() => agregarComandante(sug)}>{sug}</button>
+						{#if modalComandantes.length > 0}
+							<ul class="commander-list">
+								{#each modalComandantes as cmd, i}
+									<li class="commander-tag">
+										<span>{cmd}</span>
+										<button onclick={() => quitarComandante(i)} title="Quitar">×</button>
 									</li>
 								{/each}
 							</ul>
 						{/if}
-					</div>
-					{#if modalComandanteError}
-						<p class="field-error">{modalComandanteError}</p>
-					{/if}
-				</div>
-			{/if}
 
-			<div class="form-field">
-				<label class="field-label" for="modal-import">
-					Importar lista
-					<span class="field-hint">— opcional, cualquier formato (Moxfield, Arena, MTGO...)</span>
-				</label>
-				<textarea
-					id="modal-import"
-					class="import-textarea"
-					bind:value={modalImportText}
-					placeholder="1 Lightning Bolt&#10;4 Counterspell&#10;..."
-					rows="5"
-				></textarea>
-			</div>
+						<div class="autocomplete-wrap">
+							<input
+								id="modal-comandante"
+								type="text"
+								value={modalComandanteInput}
+								oninput={(e) => buscarComandante((e.target as HTMLInputElement).value)}
+								placeholder="Buscar y seleccionar comandante..."
+								class:input-error={!!modalComandanteError}
+							/>
+							{#if modalComandanteSugerencias.length > 0}
+								<ul class="autocomplete-list">
+									{#each modalComandanteSugerencias as sug}
+										<li>
+											<button onclick={() => agregarComandante(sug)}>{sug}</button>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</div>
+						{#if modalComandanteError}
+							<p class="field-error">{modalComandanteError}</p>
+						{/if}
+					</div>
+				{/if}
+
+				<div class="form-field">
+					<label class="field-label" for="modal-import">
+						Importar lista
+						<span class="field-hint">— opcional, cualquier formato (Moxfield, Arena, MTGO...)</span>
+					</label>
+					<textarea
+						id="modal-import"
+						class="import-textarea"
+						bind:value={modalImportText}
+						placeholder="1 Lightning Bolt&#10;4 Counterspell&#10;..."
+						rows="5"
+					></textarea>
+				</div>
 			</div>
 
 			<div class="modal-footer">
 				<button class="btn btn-ghost" onclick={() => (modalAbierto = false)}>Cancelar</button>
-				<button class="btn btn-primary" onclick={confirmarCrearMazo} disabled={!modalNombre.trim() || modalCargando}>
+				<button
+					class="btn btn-primary"
+					onclick={confirmarCrearMazo}
+					disabled={!modalNombre.trim() || modalCargando}
+				>
 					{modalCargando ? 'Creando...' : 'Crear Mazo →'}
 				</button>
 			</div>
@@ -912,43 +995,45 @@
 <style>
 	/* ── Design tokens ─────────────────────────────────────────────── */
 	:global(:root) {
-		--bg:           #0c0c10;
-		--surface:      #14141c;
-		--surface-2:    #1c1c28;
-		--surface-3:    #24243200;
-		--border:       #2a2a38;
+		--bg: #0c0c10;
+		--surface: #14141c;
+		--surface-2: #1c1c28;
+		--surface-3: #24243200;
+		--border: #2a2a38;
 		--border-focus: #6d5acd;
 
-		--text-primary:   #f0eff6;
+		--text-primary: #f0eff6;
 		--text-secondary: #8e8da8;
-		--text-muted:     #5a596e;
+		--text-muted: #5a596e;
 
-		--accent:       #7c5cf6;
+		--accent: #7c5cf6;
 		--accent-light: #9b7cff;
-		--accent-dim:   rgba(124, 92, 246, 0.15);
+		--accent-dim: rgba(124, 92, 246, 0.15);
 
-		--gold:         #c9a840;
-		--gold-dim:     rgba(201, 168, 64, 0.18);
+		--gold: #c9a840;
+		--gold-dim: rgba(201, 168, 64, 0.18);
 
-		--danger:       #e0434a;
-		--danger-dim:   rgba(224, 67, 74, 0.15);
+		--danger: #e0434a;
+		--danger-dim: rgba(224, 67, 74, 0.15);
 
-		--green:        #3db37a;
-		--green-dim:    rgba(61, 179, 122, 0.18);
+		--green: #3db37a;
+		--green-dim: rgba(61, 179, 122, 0.18);
 
-		--radius-sm:    6px;
-		--radius:       10px;
-		--radius-lg:    14px;
+		--radius-sm: 6px;
+		--radius: 10px;
+		--radius-lg: 14px;
 
-		--shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
-		--shadow-md:  0 4px 16px rgba(0,0,0,0.55);
-		--shadow-lg:  0 12px 36px rgba(0,0,0,0.7);
+		--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+		--shadow-md: 0 4px 16px rgba(0, 0, 0, 0.55);
+		--shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.7);
 
 		--font: 'Inter', system-ui, -apple-system, sans-serif;
 	}
 
 	/* ── Reset / Base ──────────────────────────────────────────────── */
-	:global(*) { box-sizing: border-box; }
+	:global(*) {
+		box-sizing: border-box;
+	}
 
 	:global(body) {
 		background: var(--bg);
@@ -993,7 +1078,10 @@
 		font-size: 13px;
 		font-weight: 500;
 		cursor: pointer;
-		transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+		transition:
+			background 0.15s,
+			border-color 0.15s,
+			box-shadow 0.15s;
 		white-space: nowrap;
 		text-decoration: none;
 	}
@@ -1191,28 +1279,66 @@
 		transition: color 0.15s;
 	}
 
-	.mana-w .pip-symbol { background: #c8b47c; color: #1a1000; }
-	.mana-u .pip-symbol { background: #2c6fad; }
-	.mana-b .pip-symbol { background: #48484e; }
-	.mana-r .pip-symbol { background: #c93c1c; }
-	.mana-g .pip-symbol { background: #2e7d4f; }
-	.mana-clear .pip-symbol { background: var(--surface-3); border: 1px solid var(--border); color: var(--text-secondary); font-size: 12px; }
+	.mana-w .pip-symbol {
+		background: #c8b47c;
+		color: #1a1000;
+	}
+	.mana-u .pip-symbol {
+		background: #2c6fad;
+	}
+	.mana-b .pip-symbol {
+		background: #48484e;
+	}
+	.mana-r .pip-symbol {
+		background: #c93c1c;
+	}
+	.mana-g .pip-symbol {
+		background: #2e7d4f;
+	}
+	.mana-clear .pip-symbol {
+		background: var(--surface-3);
+		border: 1px solid var(--border);
+		color: var(--text-secondary);
+		font-size: 12px;
+	}
 
 	.mana-pip:hover {
 		background: var(--surface-2);
 		border-color: var(--border-focus);
 	}
 
-	.mana-pip:hover .pip-label { color: var(--text-primary); }
+	.mana-pip:hover .pip-label {
+		color: var(--text-primary);
+	}
 
-	.mana-w.active { background: rgba(200,180,124,0.12); border-color: #c8b47c; }
-	.mana-u.active { background: rgba(44,111,173,0.18); border-color: #2c6fad; }
-	.mana-b.active { background: rgba(72,72,78,0.25); border-color: #888; }
-	.mana-r.active { background: rgba(201,60,28,0.18); border-color: #c93c1c; }
-	.mana-g.active { background: rgba(46,125,79,0.18); border-color: #2e7d4f; }
-	.mana-clear.active { background: var(--accent-dim); border-color: var(--accent); }
+	.mana-w.active {
+		background: rgba(200, 180, 124, 0.12);
+		border-color: #c8b47c;
+	}
+	.mana-u.active {
+		background: rgba(44, 111, 173, 0.18);
+		border-color: #2c6fad;
+	}
+	.mana-b.active {
+		background: rgba(72, 72, 78, 0.25);
+		border-color: #888;
+	}
+	.mana-r.active {
+		background: rgba(201, 60, 28, 0.18);
+		border-color: #c93c1c;
+	}
+	.mana-g.active {
+		background: rgba(46, 125, 79, 0.18);
+		border-color: #2e7d4f;
+	}
+	.mana-clear.active {
+		background: var(--accent-dim);
+		border-color: var(--accent);
+	}
 
-	.mana-pip.active .pip-label { color: var(--text-primary); }
+	.mana-pip.active .pip-label {
+		color: var(--text-primary);
+	}
 
 	/* ── App layout ────────────────────────────────────────────────── */
 	.app-layout {
@@ -1357,7 +1483,7 @@
 		color: var(--text-secondary);
 		font-weight: 500;
 	}
- 
+
 	.pager {
 		display: flex;
 		flex-direction: row;
@@ -1449,7 +1575,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.status-text {
@@ -1472,7 +1600,10 @@
 		overflow: hidden;
 		background: var(--surface-2);
 		border: 1px solid var(--border);
-		transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+		transition:
+			transform 0.2s ease,
+			box-shadow 0.2s ease,
+			border-color 0.2s;
 		cursor: default;
 	}
 
@@ -1504,7 +1635,9 @@
 		justify-content: center;
 		cursor: pointer;
 		opacity: 0;
-		transition: opacity 0.2s ease, background 0.15s ease;
+		transition:
+			opacity 0.2s ease,
+			background 0.15s ease;
 		z-index: 5;
 		padding: 0;
 	}
@@ -1531,7 +1664,7 @@
 		display: flex;
 		gap: 6px;
 		padding: 10px 10px 12px;
-		background: linear-gradient(to top, rgba(8,8,14,0.92) 60%, transparent);
+		background: linear-gradient(to top, rgba(8, 8, 14, 0.92) 60%, transparent);
 		opacity: 0;
 		transition: opacity 0.2s ease;
 		justify-content: center;
@@ -1594,99 +1727,6 @@
 		text-align: center;
 		font-size: 11px;
 		color: var(--text-muted);
-	}
-
-	/* ── Deck analysis ─────────────────────────────────────────────── */
-	.analyze-btn {
-		width: 100%;
-		margin-top: 10px;
-		justify-content: center;
-	}
-
-	.analysis-panel {
-		margin-top: 10px;
-		background: var(--surface-2);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		padding: 10px;
-	}
-
-	.analysis-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--text-primary);
-		margin-bottom: 8px;
-	}
-
-	.alerts-list {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		margin-bottom: 10px;
-	}
-
-	.alert-item {
-		background: var(--danger-dim);
-		color: var(--danger);
-		border: 1px solid rgba(224, 67, 74, 0.3);
-		border-radius: var(--radius-sm);
-		padding: 5px 8px;
-		font-size: 10px;
-		line-height: 1.4;
-	}
-
-	.alert-ok {
-		color: var(--green);
-		font-size: 11px;
-		margin-bottom: 8px;
-		font-weight: 500;
-	}
-
-	.tag-distribution {
-		display: flex;
-		flex-direction: column;
-		gap: 5px;
-	}
-
-	.tag-row {
-		display: flex;
-		align-items: center;
-		gap: 5px;
-	}
-
-	.tag-label {
-		font-size: 10px;
-		color: var(--text-secondary);
-		width: 88px;
-		flex-shrink: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.tag-bar {
-		flex: 1;
-		height: 5px;
-		background: var(--surface);
-		border-radius: 3px;
-		overflow: hidden;
-	}
-
-	.tag-fill {
-		height: 100%;
-		background: var(--accent);
-		border-radius: 3px;
-	}
-
-	.tag-count {
-		font-size: 10px;
-		color: var(--text-muted);
-		width: 16px;
-		text-align: right;
-		flex-shrink: 0;
 	}
 
 	.deck-count-row {
@@ -1867,7 +1907,9 @@
 		outline: none;
 		transition: border-color 0.15s;
 	}
-	.import-textarea:focus { border-color: var(--border-focus); }
+	.import-textarea:focus {
+		border-color: var(--border-focus);
+	}
 
 	.commander-list {
 		list-style: none;
@@ -1904,67 +1946,131 @@
 
 	/* ── Detail overlay ────────────────────────────────────────────── */
 	.detalle-overlay {
-		position: fixed; inset: 0;
-		background: rgba(0,0,0,0.78);
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.78);
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
-		display: flex; align-items: center; justify-content: center;
-		z-index: 300; padding: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 300;
+		padding: 20px;
 	}
 	.detalle-panel {
 		background: linear-gradient(160deg, #1a1926, var(--surface));
-		border: 1px solid rgba(124,92,246,0.25);
+		border: 1px solid rgba(124, 92, 246, 0.25);
 		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg), 0 0 40px rgba(124,92,246,0.12);
-		width: 100%; max-width: 700px;
-		max-height: 90vh; overflow-y: auto;
+		box-shadow:
+			var(--shadow-lg),
+			0 0 40px rgba(124, 92, 246, 0.12);
+		width: 100%;
+		max-width: 700px;
+		max-height: 90vh;
+		overflow-y: auto;
 		position: relative;
-		scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+		scrollbar-width: thin;
+		scrollbar-color: var(--border) transparent;
 	}
 	.detalle-cerrar {
-		position: absolute; top: 14px; right: 14px;
-		width: 30px; height: 30px;
+		position: absolute;
+		top: 14px;
+		right: 14px;
+		width: 30px;
+		height: 30px;
 		border-radius: 50%;
 		border: 1px solid var(--border);
-		background: var(--surface-2); color: var(--text-secondary);
+		background: var(--surface-2);
+		color: var(--text-secondary);
 		cursor: pointer;
-		display: flex; align-items: center; justify-content: center;
-		transition: background 0.15s, color 0.15s, border-color 0.15s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition:
+			background 0.15s,
+			color 0.15s,
+			border-color 0.15s;
 		z-index: 1;
 	}
-	.detalle-cerrar:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-	.detalle-cerrar svg { width: 14px; height: 14px; }
-	.detalle-body { display: flex; gap: 24px; padding: 24px; }
+	.detalle-cerrar:hover {
+		background: var(--danger);
+		color: #fff;
+		border-color: var(--danger);
+	}
+	.detalle-cerrar svg {
+		width: 14px;
+		height: 14px;
+	}
+	.detalle-body {
+		display: flex;
+		gap: 24px;
+		padding: 24px;
+	}
 	.detalle-img {
-		width: 225px; flex-shrink: 0;
+		width: 225px;
+		flex-shrink: 0;
 		border-radius: var(--radius);
 		align-self: flex-start;
-		box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 	}
-	.detalle-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding-top: 4px; }
+	.detalle-info {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding-top: 4px;
+	}
 	.detalle-nombre {
 		margin: 0 0 4px;
-		font-size: 20px; font-weight: 700;
+		font-size: 20px;
+		font-weight: 700;
 		color: var(--text-primary);
-		line-height: 1.25; letter-spacing: -0.01em;
+		line-height: 1.25;
+		letter-spacing: -0.01em;
 	}
 	.detalle-fila {
-		display: flex; flex-direction: column; gap: 3px;
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
 		padding: 10px 12px;
 		background: var(--surface-2);
 		border-radius: var(--radius-sm);
 		border: 1px solid var(--border);
 	}
 	.detalle-label {
-		font-size: 10px; font-weight: 700;
-		text-transform: uppercase; letter-spacing: 0.1em;
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
 		color: var(--text-muted);
 	}
-	.detalle-valor { font-size: 13px; color: var(--text-primary); line-height: 1.55; }
-	.detalle-valor.mana { color: var(--gold); font-weight: 700; letter-spacing: 0.03em; }
-	.detalle-valor.oracle { color: var(--text-secondary); white-space: pre-wrap; }
-	.rarity-common { color: var(--text-secondary); }
-	.rarity-uncommon { color: #a8c4d4; }
-	.rarity-rare { color: var(--gold); font-weight: 600; }
-	.rarity-mythic { color: #e87c3e; font-weight: 600; }
+	.detalle-valor {
+		font-size: 13px;
+		color: var(--text-primary);
+		line-height: 1.55;
+	}
+	.detalle-valor.mana {
+		color: var(--gold);
+		font-weight: 700;
+		letter-spacing: 0.03em;
+	}
+	.detalle-valor.oracle {
+		color: var(--text-secondary);
+		white-space: pre-wrap;
+	}
+	.rarity-common {
+		color: var(--text-secondary);
+	}
+	.rarity-uncommon {
+		color: #a8c4d4;
+	}
+	.rarity-rare {
+		color: var(--gold);
+		font-weight: 600;
+	}
+	.rarity-mythic {
+		color: #e87c3e;
+		font-weight: 600;
+	}
 </style>

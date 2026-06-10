@@ -49,7 +49,10 @@
 	}
 
 	async function buscarComandante(query: string) {
-		if (query.length < 2) { showResults = false; return; }
+		if (query.length < 2) {
+			showResults = false;
+			return;
+		}
 		try {
 			const res = await fetch(
 				`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}+is%3Acommander`
@@ -59,7 +62,9 @@
 				searchResults = data.data.slice(0, 8);
 				showResults = true;
 			}
-		} catch { /* silencioso */ }
+		} catch {
+			/* silencioso */
+		}
 	}
 
 	function seleccionarComandante(card: any) {
@@ -121,8 +126,14 @@
 
 	function detenerCambio(id: number) {
 		if (cambiandoId !== id) return;
-		if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-		if (pressInterval) { clearInterval(pressInterval); pressInterval = null; }
+		if (pressTimer) {
+			clearTimeout(pressTimer);
+			pressTimer = null;
+		}
+		if (pressInterval) {
+			clearInterval(pressInterval);
+			pressInterval = null;
+		}
 		cambiandoId = -1;
 		const j = jugadores.find((x) => x.id === id);
 		if (!j) return;
@@ -219,7 +230,9 @@
 			overlayResult = resultado;
 			overlayFinal = true;
 			addLog(`D20: ${resultado}`);
-			setTimeout(() => { overlayVisible = false; }, 2200);
+			setTimeout(() => {
+				overlayVisible = false;
+			}, 2200);
 		}, 1100);
 	}
 
@@ -235,7 +248,9 @@
 			overlayResult = esCruz ? 'CRUZ' : 'CARA';
 			overlayFinal = true;
 			addLog(`Moneda: ${esCruz ? 'CRUZ' : 'CARA'}`);
-			setTimeout(() => { overlayVisible = false; }, 2200);
+			setTimeout(() => {
+				overlayVisible = false;
+			}, 2200);
 		}, 1100);
 	}
 
@@ -247,7 +262,10 @@
 	<title>AMS · MTG — Battle Arena</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+		rel="stylesheet"
+	/>
 </svelte:head>
 
 <!-- Overlay: dado / moneda -->
@@ -270,7 +288,9 @@
 		<span>Historial</span>
 		<button class="btn-icon-sm" onclick={() => (logOpen = false)}>
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-				<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+				<path
+					d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+				/>
 			</svg>
 		</button>
 	</div>
@@ -286,7 +306,11 @@
 <!-- Botón flotante de log -->
 <button class="fab-log" onclick={() => (logOpen = !logOpen)} title="Historial de combate">
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-		<path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
+		<path
+			fill-rule="evenodd"
+			d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z"
+			clip-rule="evenodd"
+		/>
 	</svg>
 </button>
 
@@ -296,7 +320,11 @@
 		<div class="brand">
 			<a href="/" class="back-link">
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+					<path
+						fill-rule="evenodd"
+						d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 				Buscador
 			</a>
@@ -306,27 +334,45 @@
 
 		<div class="header-tools">
 			<button class="tool-btn" onclick={lanzarDado} title="Lanzar D20">
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-					<path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>
-					<path d="M12 2v20M2 7l10 5 10-5"/>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.8"
+				>
+					<path d="M12 2L2 7v10l10 5 10-5V7L12 2z" />
+					<path d="M12 2v20M2 7l10 5 10-5" />
 				</svg>
 				D20
 			</button>
 			<button class="tool-btn" onclick={lanzarMoneda} title="Lanzar moneda">
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" />
+					<path
+						fill-rule="evenodd"
+						d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 				Moneda
 			</button>
 			<button class="tool-btn tool-btn-success" onclick={reiniciarPartida} title="Reiniciar vidas">
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H5.498a.75.75 0 0 0-.75.75v3.498a.75.75 0 0 0 1.5 0v-1.633l.313.315a7 7 0 0 0 11.713-3.138.75.75 0 0 0-1.462-.34Zm-3.184-3.848a7 7 0 0 0-9.875 1.179l-.313.315V7.498a.75.75 0 0 0-1.5 0v3.498a.75.75 0 0 0 .75.75h3.498a.75.75 0 0 0 0-1.5H2.254l.312-.311a5.5 5.5 0 0 1 8.512-.79.75.75 0 1 0 1.05-1.07Z" clip-rule="evenodd" />
+					<path
+						fill-rule="evenodd"
+						d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H5.498a.75.75 0 0 0-.75.75v3.498a.75.75 0 0 0 1.5 0v-1.633l.313.315a7 7 0 0 0 11.713-3.138.75.75 0 0 0-1.462-.34Zm-3.184-3.848a7 7 0 0 0-9.875 1.179l-.313.315V7.498a.75.75 0 0 0-1.5 0v3.498a.75.75 0 0 0 .75.75h3.498a.75.75 0 0 0 0-1.5H2.254l.312-.311a5.5 5.5 0 0 1 8.512-.79.75.75 0 1 0 1.05-1.07Z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 				Reiniciar
 			</button>
 			<button class="tool-btn tool-btn-danger" onclick={borrarTodo} title="Borrar todo">
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />
+					<path
+						fill-rule="evenodd"
+						d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 				Limpiar
 			</button>
@@ -382,7 +428,9 @@
 
 		<button class="btn btn-primary" onclick={agregarJugador}>
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-				<path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+				<path
+					d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+				/>
 			</svg>
 			Añadir jugador
 		</button>
@@ -393,9 +441,16 @@
 <main class="arena">
 	{#if jugadores.length === 0}
 		<div class="arena-empty">
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
-				<path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>
-				<path d="M12 2v20M2 7l10 5 10-5"/>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				class="empty-icon"
+			>
+				<path d="M12 2L2 7v10l10 5 10-5V7L12 2z" />
+				<path d="M12 2v20M2 7l10 5 10-5" />
 			</svg>
 			<p>Añade jugadores para comenzar la partida.</p>
 		</div>
@@ -416,7 +471,9 @@
 			<!-- Quitar jugador -->
 			<button class="btn-remove" onclick={() => quitarJugador(j.id)} title="Quitar jugador">
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-					<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+					<path
+						d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+					/>
 				</svg>
 			</button>
 
@@ -434,7 +491,11 @@
 							+{j.tax} Tax
 						</button>
 					{:else}
-						<button class="badge-tax badge-tax-inactive" onclick={() => cambiarTax(j.id)} title="Añadir Tax">
+						<button
+							class="badge-tax badge-tax-inactive"
+							onclick={() => cambiarTax(j.id)}
+							title="Añadir Tax"
+						>
 							Tax
 						</button>
 					{/if}
@@ -456,9 +517,12 @@
 					onmousedown={() => iniciarCambio(j.id, -1)}
 					onmouseup={() => detenerCambio(j.id)}
 					onmouseleave={() => detenerCambio(j.id)}
-					ontouchstart={(e) => { e.preventDefault(); iniciarCambio(j.id, -1); }}
-					ontouchend={() => detenerCambio(j.id)}
-				>−</button>
+					ontouchstart={(e) => {
+						e.preventDefault();
+						iniciarCambio(j.id, -1);
+					}}
+					ontouchend={() => detenerCambio(j.id)}>−</button
+				>
 
 				<span class="life-number" class:vida-baja={j.vida <= 5 && !j.eliminado}>{j.vida}</span>
 
@@ -467,9 +531,12 @@
 					onmousedown={() => iniciarCambio(j.id, 1)}
 					onmouseup={() => detenerCambio(j.id)}
 					onmouseleave={() => detenerCambio(j.id)}
-					ontouchstart={(e) => { e.preventDefault(); iniciarCambio(j.id, 1); }}
-					ontouchend={() => detenerCambio(j.id)}
-				>+</button>
+					ontouchstart={(e) => {
+						e.preventDefault();
+						iniciarCambio(j.id, 1);
+					}}
+					ontouchend={() => detenerCambio(j.id)}>+</button
+				>
 			</div>
 
 			<!-- Trackers -->
@@ -492,11 +559,15 @@
 						<div class="cmd-row">
 							<span class="cmd-name">{agresor.nombre}</span>
 							<div class="cmd-controls">
-								<button class="tracker-btn" onclick={() => cambiarCmdDmg(j.id, agresor.id, -1)}>−</button>
+								<button class="tracker-btn" onclick={() => cambiarCmdDmg(j.id, agresor.id, -1)}
+									>−</button
+								>
 								<span class="cmd-val" class:cmd-peligro={(j.cmdDmg[agresor.id] || 0) >= 18}>
 									{j.cmdDmg[agresor.id] || 0}/21
 								</span>
-								<button class="tracker-btn" onclick={() => cambiarCmdDmg(j.id, agresor.id, 1)}>+</button>
+								<button class="tracker-btn" onclick={() => cambiarCmdDmg(j.id, agresor.id, 1)}
+									>+</button
+								>
 							</div>
 						</div>
 					{/each}
@@ -517,30 +588,32 @@
 <style>
 	/* ── Tokens (mismos que +page.svelte) ─────────────────────────── */
 	:global(:root) {
-		--bg:           #0c0c10;
-		--surface:      #14141c;
-		--surface-2:    #1c1c28;
-		--border:       #2a2a38;
+		--bg: #0c0c10;
+		--surface: #14141c;
+		--surface-2: #1c1c28;
+		--border: #2a2a38;
 		--border-focus: #6d5acd;
-		--text-primary:   #f0eff6;
+		--text-primary: #f0eff6;
 		--text-secondary: #8e8da8;
-		--text-muted:     #5a596e;
-		--accent:       #7c5cf6;
+		--text-muted: #5a596e;
+		--accent: #7c5cf6;
 		--accent-light: #9b7cff;
-		--accent-dim:   rgba(124, 92, 246, 0.15);
-		--gold:         #c9a840;
-		--gold-dim:     rgba(201, 168, 64, 0.18);
-		--danger:       #e0434a;
-		--danger-dim:   rgba(224, 67, 74, 0.15);
-		--green:        #3db37a;
-		--green-dim:    rgba(61, 179, 122, 0.18);
-		--radius-sm:    6px;
-		--radius:       10px;
-		--radius-lg:    14px;
+		--accent-dim: rgba(124, 92, 246, 0.15);
+		--gold: #c9a840;
+		--gold-dim: rgba(201, 168, 64, 0.18);
+		--danger: #e0434a;
+		--danger-dim: rgba(224, 67, 74, 0.15);
+		--green: #3db37a;
+		--green-dim: rgba(61, 179, 122, 0.18);
+		--radius-sm: 6px;
+		--radius: 10px;
+		--radius-lg: 14px;
 		--font: 'Inter', system-ui, -apple-system, sans-serif;
 	}
 
-	:global(*) { box-sizing: border-box; }
+	:global(*) {
+		box-sizing: border-box;
+	}
 
 	:global(body) {
 		background: var(--bg);
@@ -564,8 +637,12 @@
 		transition: border-color 0.15s;
 	}
 
-	:global(input[type='text']:focus, select:focus) { border-color: var(--border-focus); }
-	:global(select option) { background: var(--surface-2); }
+	:global(input[type='text']:focus, select:focus) {
+		border-color: var(--border-focus);
+	}
+	:global(select option) {
+		background: var(--surface-2);
+	}
 
 	/* ── Header ────────────────────────────────────────────────────── */
 	.arena-header {
@@ -604,11 +681,18 @@
 		transition: color 0.15s;
 	}
 
-	.back-link:hover { color: var(--text-primary); }
+	.back-link:hover {
+		color: var(--text-primary);
+	}
 
-	.back-link svg { width: 16px; height: 16px; }
+	.back-link svg {
+		width: 16px;
+		height: 16px;
+	}
 
-	.header-sep { color: var(--text-muted); }
+	.header-sep {
+		color: var(--text-muted);
+	}
 
 	.header-title {
 		font-size: 14px;
@@ -639,7 +723,10 @@
 		transition: all 0.15s;
 	}
 
-	.tool-btn svg { width: 14px; height: 14px; }
+	.tool-btn svg {
+		width: 14px;
+		height: 14px;
+	}
 
 	.tool-btn:hover {
 		background: var(--surface-2);
@@ -647,8 +734,16 @@
 		border-color: var(--border-focus);
 	}
 
-	.tool-btn-success:hover { background: var(--green-dim); color: var(--green); border-color: rgba(61,179,122,0.4); }
-	.tool-btn-danger:hover  { background: var(--danger-dim); color: var(--danger); border-color: rgba(224,67,74,0.4); }
+	.tool-btn-success:hover {
+		background: var(--green-dim);
+		color: var(--green);
+		border-color: rgba(61, 179, 122, 0.4);
+	}
+	.tool-btn-danger:hover {
+		background: var(--danger-dim);
+		color: var(--danger);
+		border-color: rgba(224, 67, 74, 0.4);
+	}
 
 	/* ── Buttons genéricos ─────────────────────────────────────────── */
 	.btn {
@@ -662,11 +757,16 @@
 		font-size: 13px;
 		font-weight: 500;
 		cursor: pointer;
-		transition: background 0.15s, border-color 0.15s;
+		transition:
+			background 0.15s,
+			border-color 0.15s;
 		white-space: nowrap;
 	}
 
-	.btn svg { width: 14px; height: 14px; }
+	.btn svg {
+		width: 14px;
+		height: 14px;
+	}
 
 	.btn-primary {
 		background: var(--accent);
@@ -693,8 +793,14 @@
 		transition: background 0.15s;
 	}
 
-	.btn-icon-sm:hover { background: var(--surface-2); color: var(--text-primary); }
-	.btn-icon-sm svg { width: 14px; height: 14px; }
+	.btn-icon-sm:hover {
+		background: var(--surface-2);
+		color: var(--text-primary);
+	}
+	.btn-icon-sm svg {
+		width: 14px;
+		height: 14px;
+	}
 
 	.field-label {
 		display: block;
@@ -758,7 +864,9 @@
 		transition: background 0.1s;
 	}
 
-	.cmd-result-item:hover { background: var(--accent-dim); }
+	.cmd-result-item:hover {
+		background: var(--accent-dim);
+	}
 
 	/* ── Arena grid ────────────────────────────────────────────────── */
 	.arena {
@@ -797,7 +905,9 @@
 		border-radius: var(--radius-lg);
 		padding: 16px;
 		overflow: hidden;
-		transition: border-color 0.3s, box-shadow 0.3s;
+		transition:
+			border-color 0.3s,
+			box-shadow 0.3s;
 	}
 
 	.player-card.monarca {
@@ -817,21 +927,33 @@
 	}
 
 	@keyframes pulse-win {
-		0%, 100% { box-shadow: 0 0 24px rgba(61, 179, 122, 0.35); }
-		50%       { box-shadow: 0 0 40px rgba(61, 179, 122, 0.6); }
+		0%,
+		100% {
+			box-shadow: 0 0 24px rgba(61, 179, 122, 0.35);
+		}
+		50% {
+			box-shadow: 0 0 40px rgba(61, 179, 122, 0.6);
+		}
 	}
 
 	.card-bg-overlay {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(180deg, rgba(12,12,16,0.72) 0%, rgba(12,12,16,0.96) 70%);
+		background: linear-gradient(180deg, rgba(12, 12, 16, 0.72) 0%, rgba(12, 12, 16, 0.96) 70%);
 		pointer-events: none;
 		z-index: 0;
 	}
 
 	/* Everything inside card needs z-index > 0 */
-	.card-top, .life-section, .trackers-row, .cmd-section,
-	.status-tag, .btn-remove { position: relative; z-index: 1; }
+	.card-top,
+	.life-section,
+	.trackers-row,
+	.cmd-section,
+	.status-tag,
+	.btn-remove {
+		position: relative;
+		z-index: 1;
+	}
 
 	.btn-remove {
 		position: absolute;
@@ -850,8 +972,14 @@
 		transition: all 0.15s;
 	}
 
-	.btn-remove:hover { background: var(--danger); color: #fff; }
-	.btn-remove svg { width: 13px; height: 13px; }
+	.btn-remove:hover {
+		background: var(--danger);
+		color: #fff;
+	}
+	.btn-remove svg {
+		width: 13px;
+		height: 13px;
+	}
 
 	.card-top {
 		display: flex;
@@ -901,8 +1029,12 @@
 		transition: all 0.15s;
 	}
 
-	.badge-tax:hover { background: rgba(214, 51, 132, 0.35); }
-	.badge-tax-inactive { opacity: 0.45; }
+	.badge-tax:hover {
+		background: rgba(214, 51, 132, 0.35);
+	}
+	.badge-tax-inactive {
+		opacity: 0.45;
+	}
 
 	.badge-monarch {
 		background: transparent;
@@ -922,7 +1054,9 @@
 		color: #1a1000;
 	}
 
-	.badge-monarch:hover { background: var(--gold-dim); }
+	.badge-monarch:hover {
+		background: var(--gold-dim);
+	}
 
 	/* ── Life counter ──────────────────────────────────────────────── */
 	.life-section {
@@ -944,7 +1078,9 @@
 		transition: color 0.3s;
 	}
 
-	.vida-baja { color: var(--danger); }
+	.vida-baja {
+		color: var(--danger);
+	}
 
 	.life-btn {
 		width: 52px;
@@ -956,7 +1092,9 @@
 		cursor: pointer;
 		user-select: none;
 		-webkit-user-select: none;
-		transition: transform 0.1s, opacity 0.15s;
+		transition:
+			transform 0.1s,
+			opacity 0.15s;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -964,29 +1102,37 @@
 		font-family: var(--font);
 	}
 
-	.life-btn:active { transform: scale(0.9); }
+	.life-btn:active {
+		transform: scale(0.9);
+	}
 
 	.life-minus {
 		background: var(--danger-dim);
 		color: var(--danger);
-		border: 1px solid rgba(224,67,74,0.35);
+		border: 1px solid rgba(224, 67, 74, 0.35);
 	}
 
-	.life-minus:hover { background: var(--danger); color: #fff; }
+	.life-minus:hover {
+		background: var(--danger);
+		color: #fff;
+	}
 
 	.life-plus {
 		background: var(--green-dim);
 		color: var(--green);
-		border: 1px solid rgba(61,179,122,0.35);
+		border: 1px solid rgba(61, 179, 122, 0.35);
 	}
 
-	.life-plus:hover { background: var(--green); color: #fff; }
+	.life-plus:hover {
+		background: var(--green);
+		color: #fff;
+	}
 
 	/* ── Trackers ──────────────────────────────────────────────────── */
 	.trackers-row {
 		display: flex;
 		gap: 10px;
-		background: rgba(0,0,0,0.25);
+		background: rgba(0, 0, 0, 0.25);
 		border-radius: var(--radius-sm);
 		padding: 10px;
 		margin-bottom: 10px;
@@ -1030,7 +1176,10 @@
 		transition: all 0.1s;
 	}
 
-	.tracker-btn:hover { border-color: var(--border-focus); color: var(--text-primary); }
+	.tracker-btn:hover {
+		border-color: var(--border-focus);
+		color: var(--text-primary);
+	}
 
 	.tracker-val {
 		font-size: 13px;
@@ -1040,7 +1189,9 @@
 		text-align: center;
 	}
 
-	.veneno-peligro { color: #00e676; }
+	.veneno-peligro {
+		color: #00e676;
+	}
 
 	/* ── Commander damage ──────────────────────────────────────────── */
 	.cmd-section {
@@ -1062,7 +1213,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		background: rgba(0,0,0,0.2);
+		background: rgba(0, 0, 0, 0.2);
 		border-radius: 4px;
 		padding: 5px 8px;
 		margin-bottom: 4px;
@@ -1091,7 +1242,9 @@
 		text-align: center;
 	}
 
-	.cmd-peligro { color: var(--danger); }
+	.cmd-peligro {
+		color: var(--danger);
+	}
 
 	/* ── Status tags ───────────────────────────────────────────────── */
 	.status-tag {
@@ -1111,19 +1264,24 @@
 	.tag-eliminado {
 		background: rgba(224, 67, 74, 0.25);
 		color: var(--danger);
-		border-top: 1px solid rgba(224,67,74,0.3);
+		border-top: 1px solid rgba(224, 67, 74, 0.3);
 	}
 
 	.tag-ganador {
 		background: rgba(61, 179, 122, 0.25);
 		color: var(--green);
-		border-top: 1px solid rgba(61,179,122,0.3);
+		border-top: 1px solid rgba(61, 179, 122, 0.3);
 		animation: blink-win 1.2s ease-in-out infinite;
 	}
 
 	@keyframes blink-win {
-		0%, 100% { opacity: 1; }
-		50%       { opacity: 0.65; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.65;
+		}
 	}
 
 	/* ── Combat log ────────────────────────────────────────────────── */
@@ -1141,7 +1299,9 @@
 		flex-direction: column;
 	}
 
-	.log-open { right: 0; }
+	.log-open {
+		right: 0;
+	}
 
 	.log-header {
 		display: flex;
@@ -1167,7 +1327,7 @@
 		font-family: 'SF Mono', 'Consolas', monospace;
 		color: var(--text-secondary);
 		padding: 8px 6px;
-		border-bottom: 1px solid rgba(255,255,255,0.04);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 		line-height: 1.4;
 	}
 
@@ -1194,18 +1354,26 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.55));
-		transition: background 0.15s, transform 0.15s;
+		box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.55));
+		transition:
+			background 0.15s,
+			transform 0.15s;
 	}
 
-	.fab-log:hover { background: var(--accent-light); transform: scale(1.08); }
-	.fab-log svg { width: 20px; height: 20px; }
+	.fab-log:hover {
+		background: var(--accent-light);
+		transform: scale(1.08);
+	}
+	.fab-log svg {
+		width: 20px;
+		height: 20px;
+	}
 
 	/* ── Dice / Coin overlay ───────────────────────────────────────── */
 	.overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(0,0,0,0.8);
+		background: rgba(0, 0, 0, 0.8);
 		backdrop-filter: blur(6px);
 		z-index: 10000;
 		display: flex;
@@ -1235,7 +1403,7 @@
 		border-radius: 50%;
 		background: linear-gradient(135deg, #f0c040, #b8860b);
 		border: 6px solid #b8860b;
-		box-shadow: 0 0 30px rgba(240,192,64,0.5);
+		box-shadow: 0 0 30px rgba(240, 192, 64, 0.5);
 	}
 
 	.dice-value {
@@ -1255,8 +1423,12 @@
 	}
 
 	@keyframes spin3d {
-		from { transform: rotateX(0deg) rotateY(0deg); }
-		to   { transform: rotateX(1440deg) rotateY(1440deg); }
+		from {
+			transform: rotateX(0deg) rotateY(0deg);
+		}
+		to {
+			transform: rotateX(1440deg) rotateY(1440deg);
+		}
 	}
 
 	.overlay-card.final {
@@ -1264,7 +1436,11 @@
 	}
 
 	@keyframes land {
-		from { transform: scale(1.3); }
-		to   { transform: scale(1); }
+		from {
+			transform: scale(1.3);
+		}
+		to {
+			transform: scale(1);
+		}
 	}
 </style>

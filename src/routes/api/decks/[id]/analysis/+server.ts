@@ -68,7 +68,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!tagCounts['destruccion']) alerts.push('Tu mazo no tiene destrucción.');
 	if (!tagCounts['robo-cartas']) alerts.push('Tu mazo no tiene robo de cartas.');
 	if (!tagCounts['ramp']) alerts.push('Tu mazo no tiene aceleración de maná.');
-	if (!tagCounts['bajo-coste']) alerts.push('Tu mazo carece de jugadas tempranas (sin cartas de bajo coste).');
+	if (!tagCounts['bajo-coste'])
+		alerts.push('Tu mazo carece de jugadas tempranas (sin cartas de bajo coste).');
 
 	const highCostPct = ((tagCounts['alto-coste'] ?? 0) / total) * 100;
 	if (highCostPct > 50) {

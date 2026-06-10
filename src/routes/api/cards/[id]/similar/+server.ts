@@ -20,7 +20,16 @@ export const GET: RequestHandler = async ({ params }) => {
 	const tagConditions = tags.map((t) => `(tags LIKE '%"${t}"%')`).join(' + ');
 
 	const similar = await db.$queryRawUnsafe<
-		{ id: string; name: string; mana_cost: string | null; cmc: number; type_line: string; colors: string; rarity: string | null; tags: string }[]
+		{
+			id: string;
+			name: string;
+			mana_cost: string | null;
+			cmc: number;
+			type_line: string;
+			colors: string;
+			rarity: string | null;
+			tags: string;
+		}[]
 	>(
 		`SELECT id, name, mana_cost, cmc, type_line, colors, rarity, tags
 		 FROM "Card"

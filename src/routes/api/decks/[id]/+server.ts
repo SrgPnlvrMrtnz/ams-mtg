@@ -34,7 +34,9 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 			...(format !== undefined && { format }),
 			...(cards !== undefined && { cards: JSON.stringify(Array.isArray(cards) ? cards : []) }),
 			...(description !== undefined && { description }),
-			...(colorIdentity !== undefined && { colorIdentity: JSON.stringify(Array.isArray(colorIdentity) ? colorIdentity : []) }),
+			...(colorIdentity !== undefined && {
+				colorIdentity: JSON.stringify(Array.isArray(colorIdentity) ? colorIdentity : [])
+			}),
 			...(commander !== undefined && { commander })
 		}
 	});

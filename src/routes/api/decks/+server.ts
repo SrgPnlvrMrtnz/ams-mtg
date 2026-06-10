@@ -10,7 +10,17 @@ export const GET: RequestHandler = async ({ locals }) => {
 	const decks = await db.deck.findMany({
 		where: { userId: locals.user.id },
 		orderBy: { updatedAt: 'desc' },
-		select: { id: true, name: true, format: true, cards: true, description: true, colorIdentity: true, commander: true, createdAt: true, updatedAt: true }
+		select: {
+			id: true,
+			name: true,
+			format: true,
+			cards: true,
+			description: true,
+			colorIdentity: true,
+			commander: true,
+			createdAt: true,
+			updatedAt: true
+		}
 	});
 
 	return json(decks);
