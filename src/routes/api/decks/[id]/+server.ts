@@ -1,10 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import db from '$lib/server/db';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) return json({ error: 'No autenticado' }, { status: 401 });
-	const deck = await db.deck.findUnique({ where: { id: params.id } });
+	const deck = await locals.db.deck.findUnique({ where: { id: params.id } });
 	if (!deck) return json({ error: 'Mazo no encontrado' }, { status: 404 });
 	if (deck.userId !== locals.user.id) return json({ error: 'Sin permiso' }, { status: 403 });
 	return json(deck);
@@ -15,7 +14,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		return json({ error: 'No autenticado' }, { status: 401 });
 	}
 
-	const deck = await db.deck.findUnique({ where: { id: params.id } });
+	const deck = await locals.db.deck.findUnique({ where: { id: params.id } });
 
 	if (!deck) {
 		return json({ error: 'Mazo no encontrado' }, { status: 404 });
@@ -27,7 +26,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	const { name, format, cards, description, colorIdentity, commander } = await request.json();
 
-	const updated = await db.deck.update({
+	const updated = await locals.db.deck.update({
 		where: { id: params.id },
 		data: {
 			...(name !== undefined && { name: name.trim() }),
@@ -49,7 +48,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		return json({ error: 'No autenticado' }, { status: 401 });
 	}
 
-	const deck = await db.deck.findUnique({ where: { id: params.id } });
+	const deck = await locals.db.deck.findUnique({ where: { id: params.id } });
 
 	if (!deck) {
 		return json({ error: 'Mazo no encontrado' }, { status: 404 });
@@ -59,7 +58,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		return json({ error: 'Sin permiso' }, { status: 403 });
 	}
 
-	await db.deck.delete({ where: { id: params.id } });
+	await locals.db.deck.delete({ where: { id: params.id } });
 
 	return new Response(null, { status: 204 });
 };

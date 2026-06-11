@@ -1,5 +1,4 @@
 import { json, error } from '@sveltejs/kit';
-import db from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
 const TAG_LABELS: Record<string, string> = {
@@ -34,7 +33,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ distribution: [], alerts: [], total: 0, untagged: 0 });
 	}
 
-	const cards = await db.card.findMany({
+	const cards = await locals.db.card.findMany({
 		where: { name: { in: cardNames } },
 		select: { name: true, tags: true }
 	});

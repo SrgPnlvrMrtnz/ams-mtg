@@ -1,8 +1,8 @@
 import { json, error } from '@sveltejs/kit';
-import db from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const db = locals.db;
 	const card = await db.card.findUnique({
 		where: { id: params.id },
 		select: { tags: true }
@@ -16,7 +16,6 @@ export const GET: RequestHandler = async ({ params }) => {
 		return json({ cards: [] });
 	}
 
-	// Build a score expression: sum of LIKE matches per tag
 	const tagConditions = tags.map((t) => `(tags LIKE '%"${t}"%')`).join(' + ');
 
 	const similar = await db.$queryRawUnsafe<

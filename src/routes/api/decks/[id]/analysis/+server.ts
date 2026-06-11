@@ -1,5 +1,4 @@
 import { json, error } from '@sveltejs/kit';
-import db from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
 const TAG_LABELS: Record<string, string> = {
@@ -27,14 +26,14 @@ const TAG_LABELS: Record<string, string> = {
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) throw error(401, 'No autenticado');
 
-	const deck = await db.deck.findUnique({ where: { id: params.id } });
+	const deck = await locals.db.deck.findUnique({ where: { id: params.id } });
 	if (!deck) throw error(404, 'Mazo no encontrado');
 	if (deck.userId !== locals.user.id) throw error(403, 'Sin permiso');
 
 	const cardNames: string[] = JSON.parse(deck.cards);
 	if (cardNames.length === 0) return json({ distribution: [], alerts: [] });
 
-	const cards = await db.card.findMany({
+	const cards = await locals.db.card.findMany({
 		where: { name: { in: cardNames } },
 		select: { name: true, tags: true }
 	});

@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
-import db from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
+	const db = locals.db;
 	const q = url.searchParams.get('q')?.trim() ?? '';
 	const colorsParam = url.searchParams.get('colors');
 	const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1'));
@@ -16,7 +16,6 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	if (colorsParam) {
 		const requestedColors = colorsParam.split(',').filter(Boolean);
-		// Filter cards whose color_identity contains ALL requested colors
 		where.AND = requestedColors.map((c) => ({
 			color_identity: { contains: `"${c}"` }
 		}));

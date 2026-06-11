@@ -1,0 +1,16 @@
+name = "ams-mtg"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+main = ".svelte-kit/cloudflare/_worker.js"
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "ams_mtg_db"
+database_name = "ams-mtg-db"
+database_id = "25ecdd74-1254-477e-98f2-e59b2b97c8f1"
+migrations_dir = "migrations"
+
+[vars]
+# Las secrets (JWT_SECRET, GROQ_API_KEY) se añaden con: npx wrangler secret put JWT_SECRET

@@ -1,6 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import db from '$lib/server/db';
 import { hashPassword, verifyPassword, createJwt } from '$lib/server/auth';
 
 export const load: PageServerLoad = ({ locals }) => {
@@ -10,7 +9,7 @@ export const load: PageServerLoad = ({ locals }) => {
 };
 
 export const actions: Actions = {
-	login: async ({ request, cookies }) => {
+	login: async ({ request, cookies, locals }) => {
 		const data = await request.formData();
 		const email = data.get('email') as string;
 		const password = data.get('password') as string;
@@ -19,7 +18,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Email y contraseña son obligatorios' });
 		}
 
-		const user = await db.user.findUnique({ where: { email } });
+		const user = await locals.db.user.findUnique({ where: { email } });
 		if (!user) {
 			return fail(401, { error: 'Credenciales incorrectas' });
 		}
@@ -40,7 +39,7 @@ export const actions: Actions = {
 		redirect(302, '/');
 	},
 
-	register: async ({ request, cookies }) => {
+	register: async ({ request, cookies, locals }) => {
 		const data = await request.formData();
 		const email = data.get('email') as string;
 		const password = data.get('password') as string;
@@ -58,13 +57,13 @@ export const actions: Actions = {
 			return fail(400, { error: 'Las contraseñas no coinciden' });
 		}
 
-		const existing = await db.user.findUnique({ where: { email } });
+		const existing = await locals.db.user.findUnique({ where: { email } });
 		if (existing) {
 			return fail(409, { error: 'Ya existe una cuenta con ese email' });
 		}
 
 		const hashedPassword = await hashPassword(password);
-		const user = await db.user.create({
+		const user = await locals.db.user.create({
 			data: { email, password: hashedPassword }
 		});
 

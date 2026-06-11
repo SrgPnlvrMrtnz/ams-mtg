@@ -1,13 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import db from '$lib/server/db';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) {
 		return json({ error: 'No autenticado' }, { status: 401 });
 	}
 
-	const decks = await db.deck.findMany({
+	const decks = await locals.db.deck.findMany({
 		where: { userId: locals.user.id },
 		orderBy: { updatedAt: 'desc' },
 		select: {
@@ -37,7 +36,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'El nombre del mazo es obligatorio' }, { status: 400 });
 	}
 
-	const deck = await db.deck.create({
+	const deck = await locals.db.deck.create({
 		data: {
 			name: name.trim(),
 			format: format ?? null,
