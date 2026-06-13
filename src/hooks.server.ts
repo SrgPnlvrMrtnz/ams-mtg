@@ -10,9 +10,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (token) {
 		const payload = await verifyJwt(token);
+		console.log('[hooks] token present, payload:', payload ? 'ok' : 'null');
 		if (payload) {
 			event.locals.user = { id: payload.userId, email: payload.email };
 		}
+	} else {
+		console.log('[hooks] no token cookie');
 	}
 
 	return resolve(event);
