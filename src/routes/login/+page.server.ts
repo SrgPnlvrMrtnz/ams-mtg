@@ -8,8 +8,14 @@ export const load: PageServerLoad = ({ locals }) => {
 	}
 };
 
+interface UserRow {
+	id: string;
+	email: string;
+	password: string;
+}
+
 export const actions: Actions = {
-	login: async ({ request, cookies, locals }) => {
+	login: async ({ request, cookies, platform }) => {
 		const data = await request.formData();
 		const email = data.get('email') as string;
 		const password = data.get('password') as string;
@@ -18,12 +24,29 @@ export const actions: Actions = {
 			return fail(400, { error: 'Email y contraseña son obligatorios' });
 		}
 
-		const user = await locals.db.user.findUnique({ where: { email } });
+		let user: UserRow | null;
+		try {
+			user = await platform!.env.ams_mtg_db
+				.prepare('SELECT id, email, password FROM User WHERE email = ?')
+				.bind(email)
+				.first<UserRow>();
+		} catch (e) {
+			console.error('[login] error al buscar usuario en DB:', e);
+			return fail(500, { error: 'Error interno. Por favor, inténtalo de nuevo.' });
+		}
+
 		if (!user) {
 			return fail(401, { error: 'Credenciales incorrectas' });
 		}
 
-		const valid = await verifyPassword(password, user.password);
+		let valid: boolean;
+		try {
+			valid = await verifyPassword(password, user.password);
+		} catch (e) {
+			console.error('[login] error al verificar contraseña:', e);
+			return fail(500, { error: 'Error interno. Por favor, inténtalo de nuevo.' });
+		}
+
 		if (!valid) {
 			return fail(401, { error: 'Credenciales incorrectas' });
 		}
@@ -39,7 +62,7 @@ export const actions: Actions = {
 		redirect(302, '/');
 	},
 
-	register: async ({ request, cookies, locals }) => {
+	register: async ({ request, platform }) => {
 		const data = await request.formData();
 		const email = data.get('email') as string;
 		const password = data.get('password') as string;
@@ -57,15 +80,33 @@ export const actions: Actions = {
 			return fail(400, { error: 'Las contraseñas no coinciden' });
 		}
 
-		const existing = await locals.db.user.findUnique({ where: { email } });
+		let existing: unknown;
+		try {
+			existing = await platform!.env.ams_mtg_db
+				.prepare('SELECT id FROM User WHERE email = ?')
+				.bind(email)
+				.first();
+		} catch (e) {
+			console.error('[register] error al verificar email en DB:', e);
+			return fail(500, { error: 'Error interno. Por favor, inténtalo de nuevo.' });
+		}
+
 		if (existing) {
 			return fail(409, { error: 'Ya existe una cuenta con ese email' });
 		}
 
-		const hashedPassword = await hashPassword(password);
-		await locals.db.user.create({
-			data: { email, password: hashedPassword }
-		});
+		try {
+			const id = crypto.randomUUID();
+			const hashedPassword = await hashPassword(password);
+			const now = new Date().toISOString();
+			await platform!.env.ams_mtg_db
+				.prepare('INSERT INTO User (id, email, password, createdAt) VALUES (?, ?, ?, ?)')
+				.bind(id, email, hashedPassword, now)
+				.run();
+		} catch (e) {
+			console.error('[register] error al crear usuario en DB:', e);
+			return fail(500, { error: 'Error interno. Por favor, inténtalo de nuevo.' });
+		}
 
 		return { registered: true };
 	}
