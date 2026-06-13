@@ -1,12 +1,13 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ params, locals }) => {
-	const db = locals.db;
-	const card = await db.card.findUnique({
-		where: { id: params.id },
-		select: { tags: true }
-	});
+export const GET: RequestHandler = async ({ params, platform }) => {
+	const d1 = platform!.env.ams_mtg_db;
+
+	const card = await d1
+		.prepare('SELECT tags FROM Card WHERE id = ?')
+		.bind(params.id)
+		.first<{ tags: string }>();
 
 	if (!card) throw error(404, 'Card not found');
 
@@ -18,8 +19,16 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	const tagConditions = tags.map((t) => `(tags LIKE '%"${t}"%')`).join(' + ');
 
-	const similar = await db.$queryRawUnsafe<
-		{
+	const result = await d1
+		.prepare(
+			`SELECT id, name, mana_cost, cmc, type_line, colors, rarity, tags
+			 FROM Card
+			 WHERE id != ? AND tags != '[]' AND type_line NOT LIKE '%Land%'
+			 ORDER BY (${tagConditions}) DESC
+			 LIMIT 6`
+		)
+		.bind(params.id)
+		.all<{
 			id: string;
 			name: string;
 			mana_cost: string | null;
@@ -28,15 +37,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			colors: string;
 			rarity: string | null;
 			tags: string;
-		}[]
-	>(
-		`SELECT id, name, mana_cost, cmc, type_line, colors, rarity, tags
-		 FROM "Card"
-		 WHERE id != ? AND tags != '[]' AND type_line NOT LIKE '%Land%'
-		 ORDER BY (${tagConditions}) DESC
-		 LIMIT 6`,
-		params.id
-	);
+		}>();
 
-	return json({ cards: similar });
+	return json({ cards: result.results });
 };
