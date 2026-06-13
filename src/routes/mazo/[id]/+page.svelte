@@ -162,6 +162,49 @@
 	let exportOpen = $state(false);
 	let copiedFormat = $state('');
 
+	let importOpen = $state(false);
+	let importText = $state('');
+	let importando = $state(false);
+
+	function parsearLista(texto: string): string[] {
+		const cartas: string[] = [];
+		for (const linea of texto.split('\n')) {
+			const l = linea.trim();
+			if (!l || l.startsWith('//') || l.startsWith('#')) continue;
+			const match = l.match(/^(\d+)[x ]?\s*(.+)$/i);
+			if (match) {
+				const qty = Math.min(parseInt(match[1]), 99);
+				const nombre = match[2].trim();
+				for (let i = 0; i < qty; i++) cartas.push(nombre);
+			} else {
+				cartas.push(l);
+			}
+		}
+		return cartas;
+	}
+
+	async function importarMazo() {
+		const nuevas = parsearLista(importText);
+		if (!nuevas.length) return;
+		importando = true;
+		await actualizarCartas([...cartasEnMazo, ...nuevas]);
+		await cargarDatosCartas();
+		importText = '';
+		importOpen = false;
+		importando = false;
+	}
+
+	async function toggleCommander(nombre: string) {
+		const esComandante = comandantesDelMazo.includes(nombre);
+		const nuevoCommander = esComandante ? null : JSON.stringify([nombre]);
+		const res = await fetch(`/api/decks/${data.id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ commander: nuevoCommander })
+		});
+		if (res.ok) deck = await res.json();
+	}
+
 	let analisisData: {
 		distribution: { tag: string; label: string; count: number; percentage: number }[];
 		alerts: string[];
@@ -279,7 +322,15 @@
 
 		<span class="card-count-badge">{totalCartas} {totalCartas === 1 ? 'carta' : 'cartas'}</span>
 
-		<div class="export-wrap">
+		<button class="btn btn-ghost" onclick={() => (importOpen = true)}>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+					<path d="M7.25 2.75a.75.75 0 0 1 1.5 0v5.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V2.75Z" />
+					<path d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z" />
+				</svg>
+				Importar mazo
+			</button>
+
+			<div class="export-wrap">
 			<button class="btn btn-ghost" onclick={() => (exportOpen = !exportOpen)}>
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
 					<path
@@ -359,6 +410,40 @@
 	{/if}
 </header>
 
+{#if importOpen}
+	<div
+		class="detalle-overlay"
+		role="button"
+		tabindex="-1"
+		onclick={() => (importOpen = false)}
+		onkeydown={(e) => e.key === 'Escape' && (importOpen = false)}
+	>
+		<div class="detalle-panel import-panel" onclick={(e) => e.stopPropagation()}>
+			<button class="detalle-cerrar" onclick={() => (importOpen = false)} title="Cerrar">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+					<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+				</svg>
+			</button>
+			<div style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+				<h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text-primary);">Importar mazo</h2>
+				<p style="margin:0;font-size:12px;color:var(--text-muted);">Pega la lista de cartas. Formatos admitidos: <code>1x Nombre</code>, <code>1 Nombre</code> o solo el nombre.</p>
+				<textarea
+					bind:value={importText}
+					placeholder={"1x Lightning Bolt\n4 Counterspell\nSol Ring"}
+					rows="12"
+					style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-primary);padding:10px 12px;border-radius:var(--radius-sm);font-family:monospace;font-size:12px;resize:vertical;outline:none;width:100%;box-sizing:border-box;"
+				></textarea>
+				<div style="display:flex;gap:10px;justify-content:flex-end;">
+					<button class="btn btn-ghost" onclick={() => (importOpen = false)}>Cancelar</button>
+					<button class="btn btn-primary" onclick={importarMazo} disabled={importando || !importText.trim()}>
+						{importando ? 'Importando...' : 'Importar'}
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <main class="deck-layout">
 	<section class="cards-section">
 		{#if cargando}
@@ -416,6 +501,14 @@
 									title="Añadir una copia">+</button
 								>
 							</div>
+							<button
+								class="btn-commander"
+								class:is-commander={comandantesDelMazo.includes(nombre)}
+								onclick={() => toggleCommander(nombre)}
+								title={comandantesDelMazo.includes(nombre) ? 'Quitar como comandante' : 'Establecer como comandante'}
+							>
+								{comandantesDelMazo.includes(nombre) ? '⚔ Quitar comandante' : '⚔ Comandante'}
+							</button>
 							{#if carta}
 								<div class="card-meta">
 									{#if carta.mana_cost}<span class="meta-mana">{carta.mana_cost}</span>{/if}
@@ -1430,6 +1523,38 @@
 		width: 16px;
 		text-align: right;
 		flex-shrink: 0;
+	}
+
+	/* ── Commander btn ── */
+	.btn-commander {
+		font-size: 10px;
+		font-weight: 700;
+		padding: 4px 10px;
+		border-radius: 12px;
+		border: 1px solid rgba(201, 168, 64, 0.4);
+		background: rgba(201, 168, 64, 0.08);
+		color: var(--gold);
+		cursor: pointer;
+		transition: background 0.15s, color 0.15s, border-color 0.15s;
+		white-space: nowrap;
+	}
+	.btn-commander:hover {
+		background: rgba(201, 168, 64, 0.2);
+		border-color: rgba(201, 168, 64, 0.7);
+	}
+	.btn-commander.is-commander {
+		background: rgba(224, 67, 74, 0.1);
+		color: var(--danger);
+		border-color: rgba(224, 67, 74, 0.4);
+	}
+	.btn-commander.is-commander:hover {
+		background: var(--danger);
+		color: #fff;
+	}
+
+	/* ── Import panel ── */
+	.import-panel {
+		max-width: 520px;
 	}
 
 	/* ── Export ── */
