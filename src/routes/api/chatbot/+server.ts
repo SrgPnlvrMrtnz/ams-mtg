@@ -1,20 +1,25 @@
 import { json } from '@sveltejs/kit';
-import { GROQ_API_KEY } from '$env/static/private';
 import type { RequestHandler } from './$types';
 
 const MODEL = 'llama-3.3-70b-versatile';
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	if (!locals.user) {
 		return json({ error: 'No autorizado' }, { status: 401 });
 	}
+
+	const apiKey = (platform?.env as any)?.GROQ_API_KEY;
+	if (!apiKey) {
+		return json({ error: 'API key no configurada.' }, { status: 500 });
+	}
+
 	const { messages } = await request.json();
 
 	const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${GROQ_API_KEY}`
+			Authorization: `Bearer ${apiKey}`
 		},
 		body: JSON.stringify({
 			model: MODEL,
