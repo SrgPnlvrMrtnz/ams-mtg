@@ -63,18 +63,10 @@ export const actions: Actions = {
 		}
 
 		const hashedPassword = await hashPassword(password);
-		const user = await locals.db.user.create({
+		await locals.db.user.create({
 			data: { email, password: hashedPassword }
 		});
 
-		const token = await createJwt(user.id, user.email);
-		cookies.set('token', token, {
-			path: '/',
-			httpOnly: true,
-			sameSite: 'strict',
-			maxAge: 60 * 60 * 24 * 7
-		});
-
-		redirect(302, '/');
+		return { registered: true };
 	}
 };

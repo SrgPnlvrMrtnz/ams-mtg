@@ -77,6 +77,7 @@
 	let modalComandanteError = $state('');
 	let modalComandanteSugerencias: string[] = $state([]);
 	let modalCargando = $state(false);
+	let modalError = $state('');
 	let modalImportText = $state('');
 
 	function parseImportList(text: string): string[] {
@@ -356,7 +357,6 @@
 	async function confirmarCrearMazo() {
 		if (!modalNombre.trim()) return;
 
-		// Validate commander input if format requires it
 		if (
 			COMMANDER_FORMATS.includes(modalFormato) &&
 			modalComandanteInput.trim() &&
@@ -367,6 +367,7 @@
 		}
 
 		modalCargando = true;
+		modalError = '';
 		try {
 			const res = await fetch('/api/decks', {
 				method: 'POST',
@@ -385,7 +386,12 @@
 				mazos = [nuevo, ...mazos];
 				mazoSeleccionadoId = nuevo.id;
 				modalAbierto = false;
+			} else {
+				const body = await res.json().catch(() => ({}));
+				modalError = body.error ?? `Error del servidor (${res.status})`;
 			}
+		} catch {
+			modalError = 'Error de red. Comprueba tu conexión e inténtalo de nuevo.';
 		} finally {
 			modalCargando = false;
 		}
@@ -978,6 +984,9 @@
 				</div>
 			</div>
 
+			{#if modalError}
+				<p class="field-error" style="margin: 0 20px 8px;">{modalError}</p>
+			{/if}
 			<div class="modal-footer">
 				<button class="btn btn-ghost" onclick={() => (modalAbierto = false)}>Cancelar</button>
 				<button

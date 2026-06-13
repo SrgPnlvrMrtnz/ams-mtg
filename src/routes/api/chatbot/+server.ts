@@ -4,7 +4,10 @@ import type { RequestHandler } from './$types';
 
 const MODEL = 'llama-3.3-70b-versatile';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'No autorizado' }, { status: 401 });
+	}
 	const { messages } = await request.json();
 
 	const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {

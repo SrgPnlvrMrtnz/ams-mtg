@@ -7,4 +7,5 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 	if (!locals.user && !PUBLIC_PATHS.includes(url.pathname)) {
 		redirect(302, '/login');
 	}
+	return { user: locals.user };
 };

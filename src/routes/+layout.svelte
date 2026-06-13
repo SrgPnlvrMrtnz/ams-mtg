@@ -2,7 +2,7 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 
-	let { children } = $props();
+	let { children, data } = $props();
 
 	interface Msg {
 		role: 'user' | 'assistant';
@@ -55,6 +55,7 @@
 {@render children()}
 
 <!-- Chatbot flotante -->
+{#if data.user}
 <div class="chat-widget">
 	{#if open}
 		<div class="chat-panel">
@@ -122,6 +123,7 @@
 		{/if}
 	</button>
 </div>
+{/if}
 
 <style>
 	.chat-widget {

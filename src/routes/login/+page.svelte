@@ -4,6 +4,10 @@
 	let { form } = $props();
 
 	let mostrarRegistro = $state(false);
+
+	$effect(() => {
+		if (form?.registered) mostrarRegistro = false;
+	});
 </script>
 
 <div class="contenedor">
@@ -21,6 +25,9 @@
 					<label for="password">Contraseña</label>
 					<input id="password" name="password" type="password" placeholder="••••••••" required />
 				</div>
+				{#if form?.registered}
+					<p class="success">Cuenta creada. Inicia sesión.</p>
+				{/if}
 				{#if form?.error}
 					<p class="error">{form.error}</p>
 				{/if}
@@ -161,6 +168,12 @@
 
 	.error {
 		color: var(--danger);
+		font-size: 0.85rem;
+		margin: -4px 0 12px;
+	}
+
+	.success {
+		color: #4caf50;
 		font-size: 0.85rem;
 		margin: -4px 0 12px;
 	}

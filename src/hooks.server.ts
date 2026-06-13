@@ -1,9 +1,9 @@
 import type { Handle } from '@sveltejs/kit';
 import { verifyJwt } from '$lib/server/auth';
-import { createDb } from '$lib/server/db';
+import { getDb } from '$lib/server/db';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	event.locals.db = createDb(event.platform!.env.ams_mtg_db);
+	event.locals.db = getDb(event.platform!.env.ams_mtg_db);
 
 	const token = event.cookies.get('token') ?? null;
 	event.locals.user = null;
