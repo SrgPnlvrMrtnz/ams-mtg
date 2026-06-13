@@ -4,10 +4,38 @@
 	let { form } = $props();
 
 	let mostrarRegistro = $state(false);
+	let cargando = $state(false);
+	let errorRed = $state<string | null>(null);
 
 	$effect(() => {
 		if (form?.registered) mostrarRegistro = false;
 	});
+
+	function handleEnhance() {
+		cargando = true;
+		errorRed = null;
+		return async ({ update, result }: { update: (opts?: { reset: boolean }) => Promise<void>; result: { type: string } }) => {
+			cargando = false;
+			await update({ reset: false });
+		};
+	}
+
+	function handleEnhanceConError(accion: string) {
+		return () => {
+			cargando = true;
+			errorRed = null;
+			return async ({ update, result }: { update: (opts?: { reset: boolean }) => Promise<void>; result: { type: string; error?: unknown } }) => {
+				cargando = false;
+				if (result.type === 'error') {
+					const msg = `Error de red al intentar ${accion}`;
+					errorRed = 'Error de conexión. Por favor, inténtalo de nuevo.';
+					console.error(`[login] ${msg}`, result.error);
+				} else {
+					await update({ reset: false });
+				}
+			};
+		};
+	}
 </script>
 
 <div class="contenedor">
@@ -16,7 +44,7 @@
 
 		{#if !mostrarRegistro}
 			<h2>Iniciar sesión</h2>
-			<form method="POST" action="?/login" use:enhance>
+			<form method="POST" action="?/login" use:enhance={handleEnhanceConError('login')}>
 				<div class="campo">
 					<label for="email">Email</label>
 					<input id="email" name="email" type="email" placeholder="tu@email.com" required />
@@ -28,10 +56,12 @@
 				{#if form?.registered}
 					<p class="success">Cuenta creada. Inicia sesión.</p>
 				{/if}
-				{#if form?.error}
-					<p class="error">{form.error}</p>
+				{#if form?.error || errorRed}
+					<p class="error">{form?.error ?? errorRed}</p>
 				{/if}
-				<button type="submit" class="btn-primary">Iniciar sesión</button>
+				<button type="submit" class="btn-primary" disabled={cargando}>
+					{cargando ? 'Iniciando sesión…' : 'Iniciar sesión'}
+				</button>
 			</form>
 			<p class="toggle">
 				¿No tienes cuenta?
@@ -41,7 +71,7 @@
 			</p>
 		{:else}
 			<h2>Crear cuenta</h2>
-			<form method="POST" action="?/register" use:enhance>
+			<form method="POST" action="?/register" use:enhance={handleEnhanceConError('registro')}>
 				<div class="campo">
 					<label for="reg-email">Email</label>
 					<input id="reg-email" name="email" type="email" placeholder="tu@email.com" required />
@@ -66,10 +96,12 @@
 						required
 					/>
 				</div>
-				{#if form?.error}
-					<p class="error">{form.error}</p>
+				{#if form?.error || errorRed}
+					<p class="error">{form?.error ?? errorRed}</p>
 				{/if}
-				<button type="submit" class="btn-primary">Crear cuenta</button>
+				<button type="submit" class="btn-primary" disabled={cargando}>
+					{cargando ? 'Creando cuenta…' : 'Crear cuenta'}
+				</button>
 			</form>
 			<p class="toggle">
 				¿Ya tienes cuenta?
@@ -161,9 +193,14 @@
 		text-transform: none;
 	}
 
-	.btn-primary:hover {
+	.btn-primary:hover:not(:disabled) {
 		background: var(--primary-hover);
 		transform: none;
+	}
+
+	.btn-primary:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.error {
